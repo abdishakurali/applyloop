@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #14140f;
+  --paper: #f4f2ed;
+  --canvas: #e8e5de;
+  --border: #e2ded4;
+  --border-strong: #c9c4b6;
+  --muted: #5e5d55;
+  --faint: #8b8880;
+  --tint: #edeae2;
+  --accent: #2b3fe8;
+  --accent-hover: #1b2bb0;
+  --accent-tint: #e7e9fe;
+  --good: #16714c;
+  --good-tint: #e2f1ea;
+  --warn: #a6641a;
+  --warn-tint: #f6ebdd;
+  --warn-tint-soft: #fbf6ef;
+  --warn-border: #f0e3d0;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-canvas: var(--canvas);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-tint: var(--tint);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-tint: var(--accent-tint);
+  --color-good: var(--good);
+  --color-good-tint: var(--good-tint);
+  --color-warn: var(--warn);
+  --color-warn-tint: var(--warn-tint);
+  --color-warn-tint-soft: var(--warn-tint-soft);
+  --color-warn-border: var(--warn-border);
+  --font-sans: var(--font-public-sans);
+  --font-serif: var(--font-instrument-serif);
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+}
