@@ -4,7 +4,6 @@ import { useMemo, useState, useTransition } from "react";
 import { addOpening, draftSelectedOpenings, toggleOpeningSelected } from "@/lib/actions";
 import { SalaryRangeSlider } from "@/components/SalaryRangeSlider";
 import { SearchableSelect } from "@/components/SearchableSelect";
-import { LOCATION_OPTIONS, ROLE_OPTIONS } from "@/lib/optionLists";
 import type { Opening } from "@/lib/types";
 
 const FIT_LEVELS = [0, 70, 85] as const;
@@ -78,8 +77,8 @@ export function OpeningsBoard({
           <SearchableSelect
             name="title"
             required
-            options={ROLE_OPTIONS}
-            placeholder="Role — Senior Product Designer"
+            endpoint="/api/roles"
+            placeholder="Role — search or type your own"
           />
           <input
             name="company"
@@ -89,7 +88,7 @@ export function OpeningsBoard({
           />
           <SearchableSelect
             name="location"
-            options={LOCATION_OPTIONS}
+            endpoint="/api/locations"
             placeholder="Location — search or type your own"
           />
           <input
