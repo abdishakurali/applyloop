@@ -167,16 +167,20 @@ export async function regenerateDraft(applicationId: string, tone: string) {
   const resumeText = profile?.resume_text ?? "";
   const fullName = profile?.full_name ?? "You";
 
-  const draft = await generateDraft(resumeText, fullName, app.opening, tone);
-  await supabase
-    .from("applications")
-    .update({
-      draft_text: draft.letter,
-      draft_highlight: draft.highlight,
-      draft_missing: draft.missing,
-      signoff: draft.signoff,
-    })
-    .eq("id", applicationId);
+  try {
+    const draft = await generateDraft(resumeText, fullName, app.opening, tone);
+    await supabase
+      .from("applications")
+      .update({
+        draft_text: draft.letter,
+        draft_highlight: draft.highlight,
+        draft_missing: draft.missing,
+        signoff: draft.signoff,
+      })
+      .eq("id", applicationId);
+  } catch {
+    // Leave the existing draft untouched if regeneration fails.
+  }
   revalidatePath("/draft");
 }
 

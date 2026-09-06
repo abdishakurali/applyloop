@@ -1,7 +1,19 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let client: Anthropic | null = null;
+
+// Constructed lazily: the SDK throws at instantiation if the key is
+// missing, and actions.ts imports this module for every page (not just
+// the AI ones) — a module-scope client would crash pages that don't
+// touch AI at all whenever the key isn't configured yet.
+function getClient(): Anthropic {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error("ANTHROPIC_API_KEY is not set");
+  }
+  client ??= new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return client;
+}
 
 function extractJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -15,7 +27,7 @@ export async function scoreFit(
   resumeText: string,
   opening: { title: string; company: string; description: string },
 ): Promise<FitScore> {
-  const message = await anthropic.messages.create({
+  const message = await getClient().messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 300,
     system:
@@ -73,7 +85,7 @@ export async function generateDraft(
   tone?: string,
 ): Promise<DraftResult> {
   const toneHint = tone && TONE_HINTS[tone] ? `\n\nNUDGE: ${TONE_HINTS[tone]}` : "";
-  const message = await anthropic.messages.create({
+  const message = await getClient().messages.create({
     model: "claude-sonnet-5",
     max_tokens: 1000,
     system: DRAFT_SYSTEM_PROMPT,
