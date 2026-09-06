@@ -2,44 +2,35 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { supabase } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 import { generateDraft, scoreFit } from "./anthropic";
 import { getProfile } from "./queries";
 
-async function getOrCreateProfileId(): Promise<string> {
-  const { data } = await supabase
-    .from("profiles")
-    .select("id")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (data) return data.id;
-
-  const { data: created, error } = await supabase
-    .from("profiles")
-    .insert({})
-    .select("id")
-    .single();
-  if (error || !created) throw new Error(error?.message ?? "Failed to create profile");
-  return created.id;
+async function requireUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  return { supabase, user };
 }
 
 export async function saveResume(formData: FormData) {
+  const { supabase, user } = await requireUser();
   const fullName = String(formData.get("fullName") ?? "").trim();
   const resumeText = String(formData.get("resumeText") ?? "").trim();
-  const id = await getOrCreateProfileId();
-  await supabase
-    .from("profiles")
-    .update({
-      full_name: fullName || null,
-      resume_text: resumeText || null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id);
+
+  await supabase.from("profiles").upsert({
+    id: user.id,
+    full_name: fullName || null,
+    resume_text: resumeText || null,
+    updated_at: new Date().toISOString(),
+  });
   redirect("/roles");
 }
 
 export async function saveRolePrefs(formData: FormData) {
+  const { supabase, user } = await requireUser();
   const roles = String(formData.get("roles") ?? "")
     .split(",")
     .map((s) => s.trim())
@@ -50,23 +41,21 @@ export async function saveRolePrefs(formData: FormData) {
   const minBase = String(formData.get("minBase") ?? "").trim();
   const workAuth = String(formData.get("workAuth") ?? "").trim();
 
-  const id = await getOrCreateProfileId();
-  await supabase
-    .from("profiles")
-    .update({
-      roles,
-      work_locations: workLocations,
-      location: location || null,
-      timezone: timezone || null,
-      min_base: minBase || null,
-      work_auth: workAuth || null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id);
+  await supabase.from("profiles").upsert({
+    id: user.id,
+    roles,
+    work_locations: workLocations,
+    location: location || null,
+    timezone: timezone || null,
+    min_base: minBase || null,
+    work_auth: workAuth || null,
+    updated_at: new Date().toISOString(),
+  });
   redirect("/openings");
 }
 
 export async function addOpening(formData: FormData) {
+  const { supabase, user } = await requireUser();
   const title = String(formData.get("title") ?? "").trim();
   const company = String(formData.get("company") ?? "").trim();
   const location = String(formData.get("location") ?? "").trim();
@@ -78,6 +67,7 @@ export async function addOpening(formData: FormData) {
   const { data: inserted, error } = await supabase
     .from("openings")
     .insert({
+      user_id: user.id,
       title,
       company,
       location: location || null,
@@ -96,7 +86,8 @@ export async function addOpening(formData: FormData) {
       await supabase
         .from("openings")
         .update({ fit_score: fit.score, fit_rationale: fit.rationale })
-        .eq("id", inserted.id);
+        .eq("id", inserted.id)
+        .eq("user_id", user.id);
     } catch {
       // Fit scoring is a nice-to-have — leave it null if Claude/the key isn't available.
     }
@@ -105,14 +96,17 @@ export async function addOpening(formData: FormData) {
 }
 
 export async function toggleOpeningSelected(id: string, selected: boolean) {
-  await supabase.from("openings").update({ selected }).eq("id", id);
+  const { supabase, user } = await requireUser();
+  await supabase.from("openings").update({ selected }).eq("id", id).eq("user_id", user.id);
   revalidatePath("/openings");
 }
 
 export async function draftSelectedOpenings() {
+  const { supabase, user } = await requireUser();
   const { data: openings } = await supabase
     .from("openings")
     .select("*")
+    .eq("user_id", user.id)
     .eq("selected", true)
     .eq("archived", false);
   if (!openings || openings.length === 0) return;
@@ -124,7 +118,7 @@ export async function draftSelectedOpenings() {
   for (const opening of openings) {
     const { data: app } = await supabase
       .from("applications")
-      .insert({ opening_id: opening.id, status: "drafting" })
+      .insert({ user_id: user.id, opening_id: opening.id, status: "drafting" })
       .select("id")
       .single();
     if (!app) continue;
@@ -156,10 +150,12 @@ export async function draftSelectedOpenings() {
 }
 
 export async function regenerateDraft(applicationId: string, tone: string) {
+  const { supabase, user } = await requireUser();
   const { data: app } = await supabase
     .from("applications")
     .select("*, opening:openings(*)")
     .eq("id", applicationId)
+    .eq("user_id", user.id)
     .single();
   if (!app) return;
 
@@ -185,28 +181,38 @@ export async function regenerateDraft(applicationId: string, tone: string) {
 }
 
 export async function discardApplication(applicationId: string) {
-  await supabase.from("applications").delete().eq("id", applicationId);
+  const { supabase, user } = await requireUser();
+  await supabase.from("applications").delete().eq("id", applicationId).eq("user_id", user.id);
   revalidatePath("/draft");
 }
 
 export async function updateApplicationDraft(applicationId: string, text: string) {
-  await supabase.from("applications").update({ draft_text: text }).eq("id", applicationId);
+  const { supabase, user } = await requireUser();
+  await supabase
+    .from("applications")
+    .update({ draft_text: text })
+    .eq("id", applicationId)
+    .eq("user_id", user.id);
   revalidatePath("/draft");
 }
 
 export async function sendApplications(ids: string[]) {
+  const { supabase, user } = await requireUser();
   if (ids.length === 0) return;
   await supabase
     .from("applications")
     .update({ status: "sent", sent_at: new Date().toISOString() })
-    .in("id", ids);
+    .in("id", ids)
+    .eq("user_id", user.id);
   redirect("/sent");
 }
 
 export async function updateApplicationStatus(applicationId: string, statusNote: string) {
+  const { supabase, user } = await requireUser();
   await supabase
     .from("applications")
     .update({ status_note: statusNote || null })
-    .eq("id", applicationId);
+    .eq("id", applicationId)
+    .eq("user_id", user.id);
   revalidatePath("/sent");
 }

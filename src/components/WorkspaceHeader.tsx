@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
+import { SignOutButton } from "./SignOutButton";
 
 export function WorkspaceHeader({
   active,
@@ -30,7 +31,10 @@ export function WorkspaceHeader({
           Sent
         </Link>
       </div>
-      {right ?? <span className="size-7 rounded-full bg-border" />}
+      <div className="flex items-center gap-3">
+        {right}
+        <SignOutButton />
+      </div>
     </div>
   );
 }
