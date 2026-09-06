@@ -2,6 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { addOpening, draftSelectedOpenings, toggleOpeningSelected } from "@/lib/actions";
+import { SalaryRangeSlider } from "@/components/SalaryRangeSlider";
+import { SearchableSelect } from "@/components/SearchableSelect";
+import { LOCATION_OPTIONS, ROLE_OPTIONS } from "@/lib/optionLists";
 import type { Opening } from "@/lib/types";
 
 const FIT_LEVELS = [0, 70, 85] as const;
@@ -72,11 +75,11 @@ export function OpeningsBoard({
           }}
           className="mx-auto grid w-full max-w-[1120px] grid-cols-2 gap-3 border-b border-border bg-white px-7 py-5"
         >
-          <input
+          <SearchableSelect
             name="title"
             required
-            placeholder="Title — Senior Product Designer"
-            className="rounded-lg border border-border-strong px-3 py-2.5 text-[12.5px] outline-none focus:border-accent"
+            options={ROLE_OPTIONS}
+            placeholder="Role — Senior Product Designer"
           />
           <input
             name="company"
@@ -84,21 +87,19 @@ export function OpeningsBoard({
             placeholder="Company — Figma"
             className="rounded-lg border border-border-strong px-3 py-2.5 text-[12.5px] outline-none focus:border-accent"
           />
-          <input
+          <SearchableSelect
             name="location"
-            placeholder="Location — Remote (EMEA ok)"
-            className="rounded-lg border border-border-strong px-3 py-2.5 text-[12.5px] outline-none focus:border-accent"
-          />
-          <input
-            name="comp"
-            placeholder="Comp — $150k–$185k"
-            className="rounded-lg border border-border-strong px-3 py-2.5 text-[12.5px] outline-none focus:border-accent"
+            options={LOCATION_OPTIONS}
+            placeholder="Location — search or type your own"
           />
           <input
             name="url"
             placeholder="Posting URL (optional)"
-            className="col-span-2 rounded-lg border border-border-strong px-3 py-2.5 text-[12.5px] outline-none focus:border-accent"
+            className="rounded-lg border border-border-strong px-3 py-2.5 text-[12.5px] outline-none focus:border-accent"
           />
+          <div className="col-span-2 rounded-lg border border-border-strong px-3 py-3">
+            <SalaryRangeSlider name="comp" />
+          </div>
           <textarea
             name="description"
             required
