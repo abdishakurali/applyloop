@@ -25,8 +25,10 @@ async function searchForProfile(role: string, workLocations: string[], location:
   const country = inferCountry(location);
   const query = buildQuery(role, workLocations, location);
   let jobs = await searchJobs(query, { datePosted: "week", remoteOnly, country, location: remoteOnly ? undefined : location ?? undefined });
+  console.info("JSearch query", { query, country: country ?? null, remoteOnly, location: location ?? null, count: jobs.length });
   if (jobs.length === 0) {
     jobs = await searchJobs(query, { datePosted: "month", remoteOnly });
+    console.info("JSearch fallback query", { query, remoteOnly, count: jobs.length });
   }
   return jobs;
 }
@@ -56,7 +58,11 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
   let skipped = 0;
   for (const role of (profile.roles ?? []).slice(0, MAX_ROLES_PER_RUN)) {
     let jobs;
-    try { jobs = await searchForProfile(role, profile.work_locations ?? [], profile.location); } catch { continue; }
+    try { jobs = await searchForProfile(role, profile.work_locations ?? [], profile.location); }
+    catch (error) {
+      console.error("JSearch profile query failed", { role, location: profile.location, error: error instanceof Error ? error.message : String(error) });
+      continue;
+    }
     for (const job of jobs.slice(0, MAX_NEW_PER_ROLE)) {
       const mapped = mapJsearchJobToOpening(job);
       if (!mapped.description) continue;
@@ -116,7 +122,8 @@ export async function GET(req: NextRequest) {
       let jobs;
       try {
         jobs = await searchForProfile(role, profile.work_locations ?? [], profile.location);
-      } catch {
+      } catch (error) {
+        console.error("JSearch cron query failed", { profileId: profile.id, role, location: profile.location, error: error instanceof Error ? error.message : String(error) });
         continue; // one role's fetch failing shouldn't abort the whole run
       }
 

@@ -72,7 +72,10 @@ export async function searchJobs(
     headers: { "X-RapidAPI-Key": getApiKey(), "X-RapidAPI-Host": JSEARCH_HOST },
     signal: AbortSignal.timeout(15000),
   });
-  if (!res.ok) throw new Error(`JSearch request failed: ${res.status}`);
+  if (!res.ok) {
+    const detail = (await res.text()).replace(/\s+/g, " ").slice(0, 240);
+    throw new Error(`JSearch request failed: ${res.status}${detail ? `: ${detail}` : ""}`);
+  }
 
   const body = (await res.json()) as { data?: JsearchJob[] };
   return body.data ?? [];
