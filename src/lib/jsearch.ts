@@ -54,14 +54,16 @@ function getApiKey(): string {
 
 export async function searchJobs(
   query: string,
-  opts: { datePosted?: "all" | "today" | "3days" | "week" | "month"; remoteOnly?: boolean } = {},
+  opts: { datePosted?: "all" | "today" | "3days" | "week" | "month"; remoteOnly?: boolean; country?: string; location?: string } = {},
 ): Promise<JsearchJob[]> {
-  const url = new URL(`https://${JSEARCH_HOST}/search`);
+  const url = new URL(`https://${JSEARCH_HOST}/search-v2`);
   url.searchParams.set("query", query);
   url.searchParams.set("page", "1");
   url.searchParams.set("num_pages", "1");
   url.searchParams.set("date_posted", opts.datePosted ?? "week");
-  if (opts.remoteOnly) url.searchParams.set("remote_jobs_only", "true");
+  if (opts.remoteOnly) url.searchParams.set("work_from_home", "true");
+  if (opts.country) url.searchParams.set("country", opts.country);
+  if (opts.location) url.searchParams.set("location", opts.location);
 
   const res = await fetch(url, {
     headers: { "X-RapidAPI-Key": getApiKey(), "X-RapidAPI-Host": JSEARCH_HOST },

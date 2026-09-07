@@ -8,6 +8,17 @@ export const maxDuration = 60;
 
 const MAX_ROLES_PER_RUN = 5;
 const MAX_NEW_PER_ROLE = 5;
+const COUNTRY_CODES: Record<string, string> = {
+  austria: "at", belgium: "be", canada: "ca", denmark: "dk", finland: "fi", france: "fr",
+  germany: "de", ireland: "ie", italy: "it", kenya: "ke", netherlands: "nl", norway: "no",
+  portugal: "pt", spain: "es", sweden: "se", switzerland: "ch", "united kingdom": "gb", "united states": "us",
+};
+
+function inferCountry(location: string | null): string | undefined {
+  const lastPart = location?.split(",").at(-1)?.trim().toLowerCase();
+  if (!lastPart) return undefined;
+  return lastPart.length === 2 ? lastPart : COUNTRY_CODES[lastPart];
+}
 
 function buildQuery(role: string, workLocations: string[], location: string | null): string {
   const remoteOnly =
@@ -36,7 +47,7 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
     const query = buildQuery(role, profile.work_locations ?? [], profile.location);
     const remoteOnly = (profile.work_locations ?? []).includes("Remote — anywhere") && !(profile.work_locations ?? []).includes("On-site");
     let jobs;
-    try { jobs = await searchJobs(query, { datePosted: "week", remoteOnly }); } catch { continue; }
+    try { jobs = await searchJobs(query, { datePosted: "week", remoteOnly, country: inferCountry(profile.location), location: remoteOnly ? undefined : profile.location ?? undefined }); } catch { continue; }
     for (const job of jobs.slice(0, MAX_NEW_PER_ROLE)) {
       const mapped = mapJsearchJobToOpening(job);
       if (!mapped.description) continue;
@@ -97,7 +108,7 @@ export async function GET(req: NextRequest) {
       const remoteOnly = (profile.work_locations ?? []).includes("Remote — anywhere") && !(profile.work_locations ?? []).includes("On-site");
       let jobs;
       try {
-        jobs = await searchJobs(query, { datePosted: "week", remoteOnly });
+        jobs = await searchJobs(query, { datePosted: "week", remoteOnly, country: inferCountry(profile.location), location: remoteOnly ? undefined : profile.location ?? undefined });
       } catch {
         continue; // one role's fetch failing shouldn't abort the whole run
       }
