@@ -10,8 +10,14 @@ export function getStripe() {
   return stripe;
 }
 
-export function billingConfigured() {
-  return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID);
+export type BillingPlan = "base" | "premium";
+
+export function getPriceId(plan: BillingPlan = "base") {
+  return plan === "premium" ? process.env.STRIPE_PREMIUM_PRICE_ID : process.env.STRIPE_PRICE_ID;
+}
+
+export function billingConfigured(plan: BillingPlan = "base") {
+  return Boolean(process.env.STRIPE_SECRET_KEY && getPriceId(plan));
 }
 
 export function isFreeUser(email: string | null | undefined) {
