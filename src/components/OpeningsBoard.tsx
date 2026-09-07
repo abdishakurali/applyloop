@@ -13,6 +13,15 @@ const FIT_LEVELS = [0, 70, 85] as const;
 const DISTANCE_LEVELS = [0, 25, 50, 100] as const;
 type SourceFilter = "all" | "manual" | "auto";
 
+function displayPostedLabel(value: string | null) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return value.startsWith("Posted ")
+    ? value
+    : `Posted ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(parsed)}`;
+}
+
 export function OpeningsBoard({
   openings,
   hasResume,
@@ -207,7 +216,7 @@ export function OpeningsBoard({
                     {o.title} · {o.company}
                   </div>
                   <div className="mt-1 text-[11.5px] text-muted">
-                    {[o.location, o.comp, o.posted_label].filter(Boolean).join(" · ")}
+                    {[o.location, o.comp, displayPostedLabel(o.posted_label)].filter(Boolean).join(" · ")}
                   </div>
                   {o.fit_rationale && (
                     <div className="mt-1 text-[11px] text-faint">{o.fit_rationale}</div>
