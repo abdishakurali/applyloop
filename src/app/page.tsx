@@ -2,21 +2,6 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { ButtonLink } from "@/components/Button";
 
-const STEPS = [
-  {
-    title: "Tell it who you are",
-    body: "Paste your résumé once, plus the roles and locations you'd actually take.",
-  },
-  {
-    title: "Review real openings",
-    body: "Add postings you find. Claude scores how well each one fits before you spend an application on it.",
-  },
-  {
-    title: "Approve every draft",
-    body: "Each cover letter is written in your voice and checked against your résumé — nothing sends until you say so.",
-  },
-];
-
 export default function LandingPage() {
   return (
     <div className="min-h-screen overflow-hidden bg-[#f7f7f7] text-[#101014]">

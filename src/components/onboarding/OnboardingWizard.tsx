@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { LocationField } from "@/components/LocationField";
 import { LoginForm } from "@/components/LoginForm";
@@ -244,13 +244,7 @@ function InterstitialBody({
   screen: InterstitialScreen;
   onContinue: () => void;
 }) {
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    if (screen.variant !== "loading") return;
-    setProgress(100);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen.variant]);
+  const progress = screen.variant === "loading" ? 100 : 0;
 
   return (
     <Card className="p-8 text-center">

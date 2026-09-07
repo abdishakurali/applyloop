@@ -48,7 +48,7 @@ export async function buildResumeWithAI(formData: FormData) {
   const resumeText = await generateResume(fullName, targetRole, context);
   await supabase.from("profiles").upsert({ id: user.id, full_name: fullName || null, resume_text: resumeText, updated_at: new Date().toISOString() });
   await supabase.from("resume_profiles").insert({ user_id: user.id, name: `${targetRole} resume`, target_roles: [targetRole], resume_text: resumeText, is_primary: true });
-  redirect("/openings");
+  redirect("/openings?refresh=jobs");
 }
 
 export async function saveRolePrefs(formData: FormData) {
@@ -79,7 +79,7 @@ export async function saveRolePrefs(formData: FormData) {
     work_auth: workAuth || null,
     updated_at: new Date().toISOString(),
   });
-  redirect("/openings");
+  redirect("/openings?refresh=jobs");
 }
 
 export async function addOpening(formData: FormData) {
@@ -116,7 +116,7 @@ export async function addOpening(formData: FormData) {
         .update({ fit_score: fit.score, fit_rationale: fit.rationale })
         .eq("id", inserted.id)
         .eq("user_id", user.id);
-    } catch (error) {
+    } catch {
       // Fit scoring is a nice-to-have — leave it null if Claude/the key isn't available.
     }
   }

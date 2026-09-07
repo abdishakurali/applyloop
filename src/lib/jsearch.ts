@@ -70,6 +70,11 @@ export function mapJsearchJobToOpening(job: JsearchJob): ExternalJob {
         }`
       : null;
 
+  const postedAt = job.job_posted_at_datetime_utc ? new Date(job.job_posted_at_datetime_utc) : null;
+  const postedLabel = postedAt && !Number.isNaN(postedAt.getTime())
+    ? `Posted ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(postedAt)}`
+    : null;
+
   return {
     externalId: job.job_id,
     title: job.job_title,
@@ -81,6 +86,6 @@ export function mapJsearchJobToOpening(job: JsearchJob): ExternalJob {
     comp,
     url: job.job_apply_link ?? null,
     description: job.job_description ?? "",
-    postedLabel: job.job_posted_at_datetime_utc ?? null,
+    postedLabel,
   };
 }
