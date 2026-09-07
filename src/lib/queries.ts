@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/utils/supabase/server";
+import { localFitScore } from "./anthropic";
 import type { ApplicationStatus, ApplicationWithOpening, Opening, Profile, ResumeProfile } from "./types";
 
 export async function getCurrentUser() {
@@ -32,7 +33,7 @@ export async function getOpenings(): Promise<Opening[]> {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const { data: profile } = await supabase.from("profiles").select("roles").eq("id", user.id).maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("roles, resume_text").eq("id", user.id).maybeSingle();
   const roles = ((profile?.roles ?? []) as string[]).map((role) => role.toLowerCase().split(/[^a-z0-9+#]+/).filter((token) => token.length > 2));
 
   const { data } = await supabase
@@ -50,10 +51,13 @@ export async function getOpenings(): Promise<Opening[]> {
       const title = normalize(opening.title);
       if (!roles.some((role) => role.some((token) => title.includes(token)))) continue;
     }
+    const hydrated = opening.fit_score == null && profile?.resume_text
+      ? { ...opening, ...localFitScore(profile.resume_text, { title: opening.title, company: opening.company, description: opening.description }) }
+      : opening;
     const key = opening.source !== "manual"
       ? `auto:${normalize(opening.title)}:${normalize(opening.company)}:${normalize(opening.location)}`
       : opening.id;
-    if (!unique.has(key)) unique.set(key, opening);
+    if (!unique.has(key)) unique.set(key, hydrated);
   }
   return Array.from(unique.values());
 }
