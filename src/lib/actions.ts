@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { generateDraft, generateResume, scoreFit } from "./anthropic";
+import { generateDraft, generateResume, localDraft, localFitScore, scoreFit } from "./anthropic";
 import { getProfile } from "./queries";
 import type { BoardStage } from "./types";
 
@@ -120,7 +120,8 @@ export async function addOpening(formData: FormData) {
         .eq("id", inserted.id)
         .eq("user_id", user.id);
     } catch {
-      // Fit scoring is a nice-to-have — leave it null if Claude/the key isn't available.
+      const fit = localFitScore(profile.resume_text, { title, company, description });
+      await supabase.from("openings").update({ fit_score: fit.score, fit_rationale: fit.rationale }).eq("id", inserted.id).eq("user_id", user.id);
     }
   }
   revalidatePath("/openings");
@@ -199,14 +200,8 @@ export async function draftSelectedOpenings() {
         .eq("id", app.id);
     } catch (error) {
       console.error("generateDraft failed", error);
-      await supabase
-        .from("applications")
-        .update({
-          draft_text: "Draft generation failed — write this one by hand.",
-          draft_missing: "AI generation is temporarily unavailable. Try Generate again.",
-          signoff: fullName,
-        })
-        .eq("id", app.id);
+      const fallback = localDraft(resumeText, fullName, opening);
+      await supabase.from("applications").update({ draft_text: fallback.letter, draft_highlight: fallback.highlight, draft_missing: fallback.missing, signoff: fallback.signoff }).eq("id", app.id);
     }
     await supabase.from("openings").update({ selected: false }).eq("id", opening.id);
   }
@@ -241,7 +236,8 @@ export async function regenerateDraft(applicationId: string, tone: string) {
       .eq("id", applicationId);
     } catch (error) {
       console.error("regenerateDraft failed", error);
-      // Leave the existing draft untouched if regeneration fails.
+      const fallback = localDraft(resumeText, fullName, app.opening);
+      await supabase.from("applications").update({ draft_text: fallback.letter, draft_highlight: fallback.highlight, draft_missing: fallback.missing, signoff: fallback.signoff }).eq("id", applicationId);
   }
   revalidatePath("/draft");
 }

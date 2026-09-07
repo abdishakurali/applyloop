@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { scoreFit } from "@/lib/anthropic";
+import { localFitScore, scoreFit } from "@/lib/anthropic";
 import { mapJsearchJobToOpening, searchJobs, type ExternalJob } from "@/lib/jsearch";
 import { searchPublicJobSources } from "@/lib/publicJobs";
 import { createServiceClient } from "@/utils/supabase/service";
@@ -93,7 +93,11 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
             const fit = await scoreFit(profile.resume_text, { title: mapped.title, company: mapped.company, description: mapped.description });
             await supabase.from("openings").update({ fit_score: fit.score, fit_rationale: fit.rationale }).eq("id", existingId).eq("user_id", userId);
             fitScores++;
-          } catch (error) { console.error("fit score failed", { openingId: existingId, error: error instanceof Error ? error.message : String(error) }); }
+          } catch (error) {
+            console.error("fit score failed", { openingId: existingId, error: error instanceof Error ? error.message : String(error) });
+            const fit = localFitScore(profile.resume_text, { title: mapped.title, company: mapped.company, description: mapped.description });
+            await supabase.from("openings").update({ fit_score: fit.score, fit_rationale: fit.rationale }).eq("id", existingId).eq("user_id", userId);
+          }
         }
         continue;
       }
@@ -107,7 +111,11 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
             const fit = await scoreFit(profile.resume_text, { title: mapped.title, company: mapped.company, description: mapped.description });
             await supabase.from("openings").update({ fit_score: fit.score, fit_rationale: fit.rationale }).eq("id", insertedRow.id).eq("user_id", userId);
             fitScores++;
-          } catch (error) { console.error("fit score failed", { openingId: insertedRow.id, error: error instanceof Error ? error.message : String(error) }); }
+          } catch (error) {
+            console.error("fit score failed", { openingId: insertedRow.id, error: error instanceof Error ? error.message : String(error) });
+            const fit = localFitScore(profile.resume_text, { title: mapped.title, company: mapped.company, description: mapped.description });
+            await supabase.from("openings").update({ fit_score: fit.score, fit_rationale: fit.rationale }).eq("id", insertedRow.id).eq("user_id", userId);
+          }
         }
       }
     }
@@ -202,8 +210,10 @@ export async function GET(req: NextRequest) {
               .from("openings")
               .update({ fit_score: fit.score, fit_rationale: fit.rationale })
               .eq("id", row.id);
-          } catch {
-            // Fit scoring is a nice-to-have — leave it null on failure.
+          } catch (error) {
+            console.error("fit score failed", { openingId: row.id, error: error instanceof Error ? error.message : String(error) });
+            const fit = localFitScore(profile.resume_text, { title: mapped.title, company: mapped.company, description: mapped.description });
+            await supabase.from("openings").update({ fit_score: fit.score, fit_rationale: fit.rationale }).eq("id", row.id);
           }
         }
       }

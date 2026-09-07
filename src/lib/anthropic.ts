@@ -27,6 +27,19 @@ function extractJson(text: string): unknown {
 
 export type FitScore = { score: number; rationale: string };
 
+function words(value: string) {
+  return new Set(value.toLowerCase().match(/[a-z][a-z0-9+#.-]{2,}/g) ?? []);
+}
+
+export function localFitScore(resumeText: string, opening: { title: string; company: string; description: string }): FitScore {
+  const resumeWords = words(resumeText);
+  const jobWords = words(`${opening.title} ${opening.description}`);
+  const overlap = [...jobWords].filter((word) => resumeWords.has(word)).length;
+  const titleOverlap = [...words(opening.title)].filter((word) => resumeWords.has(word)).length;
+  const score = Math.max(15, Math.min(96, 30 + Math.round((overlap / Math.max(12, Math.min(jobWords.size, 120))) * 55) + titleOverlap * 4));
+  return { score, rationale: `Estimated from ${overlap} shared résumé/job terms${titleOverlap ? ` and ${titleOverlap} title terms` : ""}; review the source posting.` };
+}
+
 export async function scoreFit(
   resumeText: string,
   opening: { title: string; company: string; description: string },
@@ -60,6 +73,16 @@ export type DraftResult = {
   highlight: string;
   missing: string;
 };
+
+export function localDraft(resumeText: string, fullName: string, opening: { title: string; company: string; description: string }): DraftResult {
+  const summary = resumeText.replace(/\s+/g, " ").trim().slice(0, 360);
+  return {
+    letter: `I’m applying for the ${opening.title} role at ${opening.company}.\n\nMy background includes ${summary || "the experience in my résumé"}. I’m interested in this role because the work described lines up with the systems and product work I’ve been doing.\n\nI’d be glad to talk through the relevant projects and how I could contribute to the team.`,
+    signoff: fullName.split(" ")[0] || fullName,
+    highlight: "the systems and product work I’ve been doing",
+    missing: "AI provider unavailable; please review this local draft before sending",
+  };
+}
 
 export async function generateResume(fullName: string, targetRole: string, profileContext: string) {
   const message = await getClient().messages.create({

@@ -32,7 +32,11 @@ async function searchRemotive(query: string): Promise<ExternalJob[]> {
   const response = await fetch(url, { signal: AbortSignal.timeout(12000), next: { revalidate: 21600 } });
   if (!response.ok) return [];
   const body = await response.json() as { jobs?: Array<Record<string, unknown>> };
-  return (body.jobs ?? []).slice(0, 50).map((job) => ({
+  const wanted = tokens(query);
+  return (body.jobs ?? []).filter((job) => {
+    const title = String(job.title ?? "").toLowerCase();
+    return wanted.length === 0 || wanted.some((token) => title.includes(token));
+  }).slice(0, 50).map((job) => ({
     source: "remotive",
     externalId: `remotive:${String(job.id)}`,
     title: String(job.title ?? "Untitled role"),
@@ -54,15 +58,16 @@ async function searchRemotive(query: string): Promise<ExternalJob[]> {
 }
 
 async function searchArbeitnow(query: string, options: SearchOptions): Promise<ExternalJob[]> {
-  const response = await fetch("https://www.arbeitnow.com/api/job-board-api?page=1", { signal: AbortSignal.timeout(12000), next: { revalidate: 21600 } });
+  const response = await fetch("https://www.arbeitnow.com/api/job-board-api?page=1", { signal: AbortSignal.timeout(12000), cache: "no-store" });
   if (!response.ok) return [];
   const body = await response.json() as { data?: Array<Record<string, unknown>> };
   const wanted = tokens(query);
   return (body.data ?? []).filter((job) => {
-    const haystack = `${job.title ?? ""} ${job.description ?? ""} ${job.tags ?? ""} ${job.location ?? ""}`.toLowerCase();
-    const matchesRole = wanted.length === 0 || wanted.some((token) => haystack.includes(token));
+    const titleAndTags = `${job.title ?? ""} ${job.tags ?? ""}`.toLowerCase();
+    const location = String(job.location ?? "").toLowerCase();
+    const matchesRole = wanted.length === 0 || wanted.some((token) => titleAndTags.includes(token));
     const remote = Boolean(job.remote) || /remote|worldwide|anywhere/i.test(String(job.location ?? ""));
-    const matchesLocation = !options.location || haystack.includes(options.location.toLowerCase().split(",")[0]);
+    const matchesLocation = !options.location || location.includes(options.location.toLowerCase().split(",")[0]);
     return matchesRole && matchesLocation && (!options.remoteOnly || remote);
   }).slice(0, 50).map((job) => ({
     source: "arbeitnow",
