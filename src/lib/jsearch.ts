@@ -77,8 +77,19 @@ export async function searchJobs(
     throw new Error(`JSearch request failed: ${res.status}${detail ? `: ${detail}` : ""}`);
   }
 
-  const body = (await res.json()) as { data?: JsearchJob[] };
-  return body.data ?? [];
+  const body = (await res.json()) as {
+    data?: JsearchJob[] | { jobs?: JsearchJob[]; data?: JsearchJob[] };
+  };
+  if (Array.isArray(body.data)) return body.data;
+  if (body.data && typeof body.data === "object") {
+    if (Array.isArray(body.data.jobs)) return body.data.jobs;
+    if (Array.isArray(body.data.data)) return body.data.data;
+  }
+  console.warn("JSearch returned no readable jobs", {
+    dataType: typeof body.data,
+    dataKeys: body.data && typeof body.data === "object" ? Object.keys(body.data) : [],
+  });
+  return [];
 }
 
 export function mapJsearchJobToOpening(job: JsearchJob): ExternalJob {
