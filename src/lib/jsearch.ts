@@ -38,7 +38,10 @@ type JsearchJob = {
   job_salary_period?: string | null;
   job_apply_link?: string | null;
   job_description?: string | null;
-  job_posted_at_datetime_utc?: string | null;
+ job_posted_at_datetime_utc?: string | null;
+  job_posted_at?: string | null;
+  job_location?: string | null;
+  job_salary_string?: string | null;
   employer_logo?: string | null;
   employer_website?: string | null;
   job_publisher?: string | null;
@@ -59,7 +62,7 @@ export async function searchJobs(
   const url = new URL(`https://${JSEARCH_HOST}/search-v2`);
   url.searchParams.set("query", query);
   url.searchParams.set("page", "1");
-  url.searchParams.set("num_pages", "1");
+  url.searchParams.set("num_pages", "2");
   url.searchParams.set("date_posted", opts.datePosted ?? "week");
   if (opts.remoteOnly) url.searchParams.set("work_from_home", "true");
   if (opts.country) url.searchParams.set("country", opts.country);
@@ -76,18 +79,18 @@ export async function searchJobs(
 }
 
 export function mapJsearchJobToOpening(job: JsearchJob): ExternalJob {
-  const location = [job.job_city, job.job_state, job.job_country].filter(Boolean).join(", ");
+  const location = job.job_location || [job.job_city, job.job_state, job.job_country].filter(Boolean).join(", ");
   const comp =
     job.job_min_salary && job.job_max_salary
       ? `$${job.job_min_salary.toLocaleString()}–$${job.job_max_salary.toLocaleString()}${
           job.job_salary_period ? ` / ${job.job_salary_period.toLowerCase()}` : ""
         }`
-      : null;
+      : job.job_salary_string ?? null;
 
-  const postedAt = job.job_posted_at_datetime_utc ? new Date(job.job_posted_at_datetime_utc) : null;
-  const postedLabel = postedAt && !Number.isNaN(postedAt.getTime())
+ const postedAt = job.job_posted_at_datetime_utc ? new Date(job.job_posted_at_datetime_utc) : null;
+  const postedLabel = job.job_posted_at || (postedAt && !Number.isNaN(postedAt.getTime())
     ? `Posted ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(postedAt)}`
-    : null;
+    : null);
 
   return {
     externalId: job.job_id,
