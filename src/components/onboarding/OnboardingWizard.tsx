@@ -439,7 +439,7 @@ export function OnboardingWizard() {
             />
             </div>
           ) : (
-            <LoginForm next="/resume" hadError={false} onBeforeSignIn={stashAndSignIn} />
+            <LoginForm next="/openings" hadError={false} onBeforeSignIn={stashAndSignIn} />
           )}
         </div>
       </div>

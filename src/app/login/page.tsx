@@ -9,7 +9,7 @@ export default async function LoginPage({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-paper px-6">
-      <LoginForm next={next ?? "/resume"} hadError={error === "auth"} />
+      <LoginForm next={next ?? "/openings"} hadError={error === "auth"} />
     </div>
   );
 }
