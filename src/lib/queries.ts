@@ -52,7 +52,10 @@ export async function getOpenings(): Promise<Opening[]> {
       if (!roles.some((role) => role.some((token) => title.includes(token)))) continue;
     }
     const hydrated = opening.fit_score == null && profile?.resume_text
-      ? { ...opening, ...localFitScore(profile.resume_text, { title: opening.title, company: opening.company, description: opening.description }) }
+      ? (() => {
+          const fit = localFitScore(profile.resume_text, { title: opening.title, company: opening.company, description: opening.description });
+          return { ...opening, fit_score: fit.score, fit_rationale: fit.rationale };
+        })()
       : opening;
     const key = opening.source !== "manual"
       ? `auto:${normalize(opening.title)}:${normalize(opening.company)}:${normalize(opening.location)}`
