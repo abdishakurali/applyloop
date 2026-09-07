@@ -9,6 +9,7 @@ export const maxDuration = 60;
 
 const MAX_ROLES_PER_RUN = 5;
 const MAX_NEW_PER_ROLE = 20;
+const MAX_FIT_SCORES_PER_RUN = 12;
 const COUNTRY_CODES: Record<string, string> = {
   austria: "at", belgium: "be", canada: "ca", denmark: "dk", finland: "fi", france: "fr",
   germany: "de", ireland: "ie", italy: "it", kenya: "ke", netherlands: "nl", norway: "no",
@@ -36,7 +37,13 @@ async function searchForProfile(role: string, workLocations: string[], location:
   }
   const publicJobs = await searchPublicJobSources(query, { remoteOnly, location });
   const unique = new Map<string, ExternalJob>();
-  for (const job of [...jobs, ...publicJobs]) {
+  const merged: ExternalJob[] = [];
+  const maxSources = Math.max(jobs.length, publicJobs.length);
+  for (let index = 0; index < maxSources; index += 1) {
+    if (jobs[index]) merged.push(jobs[index]);
+    if (publicJobs[index]) merged.push(publicJobs[index]);
+  }
+  for (const job of merged) {
     if (job.description) unique.set(job.externalId, job);
   }
   console.info("Job source totals", { query, jsearch: jobs.length, public: publicJobs.length, total: unique.size });
@@ -65,6 +72,7 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
   const existingByExternalId = new Map((existing ?? []).filter((row) => row.external_id).map((row) => [row.external_id, row.id]));
   let inserted = 0;
   let skipped = 0;
+  let fitScores = 0;
   for (const role of (profile.roles ?? []).slice(0, MAX_ROLES_PER_RUN)) {
     let jobs;
     try { jobs = await searchForProfile(role, profile.work_locations ?? [], profile.location); }
@@ -80,11 +88,28 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
       if (existingId) {
         const { error } = await supabase.from("openings").update(values).eq("id", existingId).eq("user_id", userId);
         if (!error) skipped++;
+        if (!error && profile.resume_text && fitScores < MAX_FIT_SCORES_PER_RUN) {
+          try {
+            const fit = await scoreFit(profile.resume_text, { title: mapped.title, company: mapped.company, description: mapped.description });
+            await supabase.from("openings").update({ fit_score: fit.score, fit_rationale: fit.rationale }).eq("id", existingId).eq("user_id", userId);
+            fitScores++;
+          } catch (error) { console.error("fit score failed", { openingId: existingId, error: error instanceof Error ? error.message : String(error) }); }
+        }
         continue;
       }
       const { data: insertedRow, error } = await supabase.from("openings").insert({ user_id: userId, ...values }).select("id").single();
       if (error?.code === "23505") skipped++;
-      else if (!error && insertedRow) { inserted++; existingByExternalId.set(mapped.externalId, insertedRow.id); }
+      else if (!error && insertedRow) {
+        inserted++;
+        existingByExternalId.set(mapped.externalId, insertedRow.id);
+        if (profile.resume_text && fitScores < MAX_FIT_SCORES_PER_RUN) {
+          try {
+            const fit = await scoreFit(profile.resume_text, { title: mapped.title, company: mapped.company, description: mapped.description });
+            await supabase.from("openings").update({ fit_score: fit.score, fit_rationale: fit.rationale }).eq("id", insertedRow.id).eq("user_id", userId);
+            fitScores++;
+          } catch (error) { console.error("fit score failed", { openingId: insertedRow.id, error: error instanceof Error ? error.message : String(error) }); }
+        }
+      }
     }
   }
   return { inserted, skipped };
