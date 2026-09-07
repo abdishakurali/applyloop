@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useMemo, useState } from "react";
 import { Chip } from "@/components/Chip";
 import { LocationField } from "@/components/LocationField";
+import { RoleMultiCombobox } from "@/components/RoleCombobox";
 import { saveRolePrefs } from "@/lib/actions";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,27 +26,11 @@ export function RolesForm({
   openings: Opening[];
 }) {
   const [roles, setRoles] = useState<string[]>(profile?.roles ?? []);
-  const [roleInput, setRoleInput] = useState("");
   const [workLocations, setWorkLocations] = useState<string[]>(
     profile?.work_locations ?? [],
   );
-
-  function addRole() {
-    const value = roleInput.trim();
-    if (value && !roles.includes(value)) setRoles((prev) => [...prev, value]);
-    setRoleInput("");
-  }
-
-  function onRoleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      addRole();
-    }
-  }
-
-  function removeRole(label: string) {
-    setRoles((prev) => prev.filter((r) => r !== label));
-  }
+  const initialSalary = Number.parseInt(profile?.min_base?.replace(/[^0-9]/g, "") ?? "", 10);
+  const [minSalary, setMinSalary] = useState(Number.isFinite(initialSalary) ? Math.min(250000, Math.max(30000, initialSalary)) : 70000);
 
   function toggleWorkLocation(label: string) {
     setWorkLocations((prev) =>
@@ -74,25 +59,12 @@ export function RolesForm({
             </CardDescription>
           </CardHeader>
           <CardContent className="px-0">
-            <div className="flex flex-wrap items-center gap-2">
-              {roles.map((role) => (
-                <Chip key={role} selected onClick={() => removeRole(role)}>
-                  {role} ✕
-                </Chip>
-              ))}
-              <input
-                value={roleInput}
-                onChange={(e) => setRoleInput(e.target.value)}
-                onKeyDown={onRoleKeyDown}
-                onBlur={addRole}
-                placeholder="Type a role, press Enter…"
-                className="rounded-full border border-dashed border-border-strong bg-white px-3.5 py-2.5 text-[12.5px] font-medium text-ink outline-none placeholder:text-faint"
-              />
-            </div>
+            <RoleMultiCombobox value={roles} onChange={setRoles} placeholder="Search roles or type your own…" />
 
             <div className="my-6 h-px bg-border" />
 
-            <div className="mb-3 text-[13.5px] font-semibold">Where are you?</div>
+            <div className="mb-1 text-[13.5px] font-semibold">Where are you?</div>
+            <p className="mb-3 text-[11.5px] text-muted">Search any city, country, or region and choose a suggestion.</p>
             <div className="grid grid-cols-2 gap-3">
               <LocationField
                 name="location"
@@ -137,15 +109,11 @@ export function RolesForm({
               ))}
             </div>
 
-            <div className="mt-5.5 grid grid-cols-2 gap-3">
+            <div className="mt-5.5 grid gap-5 sm:grid-cols-2">
               <div>
-                <div className="mb-2.5 text-[12.5px] font-semibold">Minimum base</div>
-                <Input
-                  name="minBase"
-                  defaultValue={profile?.min_base ?? ""}
-                  placeholder="$70,000 · or leave blank"
-                  className="h-auto py-3"
-                />
+                <div className="mb-2 flex items-baseline justify-between text-[12.5px] font-semibold"><span>Minimum base</span><output className="text-accent">${minSalary.toLocaleString()}</output></div>
+                <input type="range" name="minBase" min="30000" max="250000" step="5000" value={minSalary} onChange={(e) => setMinSalary(Number(e.target.value))} aria-label="Minimum annual salary" className="h-2 w-full cursor-grab accent-[#6538f2] active:cursor-grabbing" />
+                <div className="mt-1 flex justify-between text-[10px] text-faint"><span>€30k</span><span>€250k+</span></div>
               </div>
               <div>
                 <div className="mb-2.5 text-[12.5px] font-semibold">Work authorization</div>
