@@ -7,6 +7,7 @@ import { RoleCombobox } from "@/components/RoleCombobox";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { haversineKm } from "@/lib/geo";
 import type { Opening, Profile } from "@/lib/types";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const FIT_LEVELS = [0, 70, 85] as const;
 const DISTANCE_LEVELS = [0, 25, 50, 100] as const;
@@ -27,6 +28,7 @@ export function OpeningsBoard({
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [showAdd, setShowAdd] = useState(openings.length === 0);
   const [isPending, startTransition] = useTransition();
+  const [detailOpening, setDetailOpening] = useState<Opening | null>(null);
 
   const home = useMemo(
     () =>
@@ -184,16 +186,17 @@ export function OpeningsBoard({
         ) : (
           <div className="flex flex-col gap-2">
             {visible.map((o) => (
-              <button
+              <div
                 key={o.id}
-                type="button"
-                onClick={() => toggle(o)}
-                disabled={isPending}
-                className={`flex items-center gap-3.5 rounded-[11px] border p-3.5 text-left transition-colors ${
+                onClick={() => setDetailOpening(o)}
+                className={`flex cursor-pointer items-center gap-3.5 rounded-[11px] border p-3.5 text-left transition-colors ${
                   o.selected ? "border-[1.5px] border-accent bg-white" : "border-border bg-white"
                 }`}
               >
-                <span
+                <button
+                  type="button"
+                  aria-label={o.selected ? `Deselect ${o.title}` : `Select ${o.title}`}
+                  onClick={(e) => { e.stopPropagation(); toggle(o); }}
                   className={`size-[17px] flex-none rounded-[5px] ${
                     o.selected ? "bg-accent" : "border-[1.5px] border-border-strong"
                   }`}
@@ -215,7 +218,7 @@ export function OpeningsBoard({
                 ) : (
                   <span className="text-[11.5px] font-medium text-faint">no résumé</span>
                 )}
-              </button>
+              </div>
             ))}
           </div>
         )}
@@ -246,6 +249,22 @@ export function OpeningsBoard({
           </button>
         </div>
       </div>
+      <Dialog open={detailOpening !== null} onOpenChange={(open) => !open && setDetailOpening(null)}>
+        {detailOpening && (
+          <DialogContent className="max-w-[620px] rounded-2xl p-6">
+            <DialogHeader>
+              <DialogTitle className="text-2xl tracking-[-.04em]">{detailOpening.title}</DialogTitle>
+              <DialogDescription className="text-sm">{detailOpening.company} · {detailOpening.location ?? "Location not listed"}</DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-accent-tint px-3 py-1.5 font-semibold text-accent">{detailOpening.fit_score !== null ? `${detailOpening.fit_score}% fit` : "Fit pending"}</span>{detailOpening.comp && <span className="rounded-full bg-tint px-3 py-1.5">{detailOpening.comp}</span>}<span className="rounded-full bg-tint px-3 py-1.5">{detailOpening.source === "jsearch" ? "RapidAPI job" : "Added by you"}</span></div>
+            <div className="max-h-[42vh] overflow-auto whitespace-pre-wrap text-[13px] leading-7 text-black/70">{detailOpening.description}</div>
+            <DialogFooter showCloseButton>
+              {detailOpening.url && <a href={detailOpening.url} target="_blank" rel="noreferrer" className="rounded-lg border border-border-strong px-4 py-2.5 text-sm font-semibold">View original posting ↗</a>}
+              <button type="button" onClick={() => { toggle(detailOpening); setDetailOpening(null); }} className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white">{detailOpening.selected ? "Remove from queue" : "Add to application queue"}</button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
     </>
   );
 }
