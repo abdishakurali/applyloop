@@ -20,6 +20,17 @@ function inferCountry(location: string | null): string | undefined {
   return lastPart.length === 2 ? lastPart : COUNTRY_CODES[lastPart];
 }
 
+async function searchForProfile(role: string, workLocations: string[], location: string | null) {
+  const remoteOnly = workLocations.includes("Remote — anywhere") && !workLocations.includes("On-site");
+  const country = inferCountry(location);
+  const query = buildQuery(role, workLocations, location);
+  let jobs = await searchJobs(query, { datePosted: "week", remoteOnly, country, location: remoteOnly ? undefined : location ?? undefined });
+  if (jobs.length === 0) {
+    jobs = await searchJobs(query, { datePosted: "month", remoteOnly });
+  }
+  return jobs;
+}
+
 function buildQuery(role: string, workLocations: string[], location: string | null): string {
   const remoteOnly =
     workLocations.includes("Remote — anywhere") && !workLocations.includes("On-site");
@@ -44,10 +55,8 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
   let inserted = 0;
   let skipped = 0;
   for (const role of (profile.roles ?? []).slice(0, MAX_ROLES_PER_RUN)) {
-    const query = buildQuery(role, profile.work_locations ?? [], profile.location);
-    const remoteOnly = (profile.work_locations ?? []).includes("Remote — anywhere") && !(profile.work_locations ?? []).includes("On-site");
     let jobs;
-    try { jobs = await searchJobs(query, { datePosted: "week", remoteOnly, country: inferCountry(profile.location), location: remoteOnly ? undefined : profile.location ?? undefined }); } catch { continue; }
+    try { jobs = await searchForProfile(role, profile.work_locations ?? [], profile.location); } catch { continue; }
     for (const job of jobs.slice(0, MAX_NEW_PER_ROLE)) {
       const mapped = mapJsearchJobToOpening(job);
       if (!mapped.description) continue;
@@ -104,11 +113,9 @@ export async function GET(req: NextRequest) {
     if (roles.length === 0) continue;
 
     for (const role of roles) {
-      const query = buildQuery(role, profile.work_locations ?? [], profile.location);
-      const remoteOnly = (profile.work_locations ?? []).includes("Remote — anywhere") && !(profile.work_locations ?? []).includes("On-site");
       let jobs;
       try {
-        jobs = await searchJobs(query, { datePosted: "week", remoteOnly, country: inferCountry(profile.location), location: remoteOnly ? undefined : profile.location ?? undefined });
+        jobs = await searchForProfile(role, profile.work_locations ?? [], profile.location);
       } catch {
         continue; // one role's fetch failing shouldn't abort the whole run
       }
