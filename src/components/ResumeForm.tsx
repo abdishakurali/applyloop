@@ -1,6 +1,12 @@
 "use client";
 
-import { saveResume } from "@/lib/actions";
+import { useEffect } from "react";
+import { reconcileOnboardingAnswers, saveResume } from "@/lib/actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const WHAT_HAPPENS = [
   "This text is what Claude reads before drafting every cover letter.",
@@ -15,58 +21,78 @@ export function ResumeForm({
   defaultFullName: string;
   defaultResumeText: string;
 }) {
+  // One-time reconciliation of answers the pre-signup onboarding wizard
+  // stashed in localStorage (no session existed yet at that point).
+  useEffect(() => {
+    let raw: string | null = null;
+    try {
+      raw = localStorage.getItem("onboarding_answers");
+    } catch {
+      return;
+    }
+    if (!raw) return;
+    try {
+      const payload = JSON.parse(raw);
+      reconcileOnboardingAnswers(payload).catch(() => {});
+    } catch {
+      // malformed stash — nothing to reconcile
+    } finally {
+      try {
+        localStorage.removeItem("onboarding_answers");
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] flex-1 grid-cols-[1fr_380px] gap-9 px-8 py-10">
-      <form action={saveResume} className="flex flex-col">
-        <h1 className="font-serif text-[38px] leading-[1.1] font-normal">
-          Start with your résumé
-        </h1>
-        <p className="mt-3 mb-6 max-w-[480px] text-sm leading-relaxed text-muted">
-          Paste the text of your résumé. We read it once to learn your voice,
-          your numbers and your actual scope — everything after this is
-          drafted from it.
-        </p>
+    <div className="flex flex-1 flex-col items-center px-6 py-10">
+      <div className="w-full max-w-[480px]">
+        <Card className="p-8">
+          <CardHeader className="px-0 text-center">
+            <CardTitle className="text-[19px]">One résumé gets you every job</CardTitle>
+            <CardDescription>
+              We read it once to learn your voice, your numbers, and your
+              actual scope — every draft after this comes from it.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-0">
+            <form action={saveResume}>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="resumeName">Resume name</FieldLabel>
+                  <Input id="resumeName" name="resumeName" defaultValue="General resume" placeholder="Product roles" />
+                  <FieldDescription>You can add tailored resumes for other roles later.</FieldDescription>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="fullName">Your name</FieldLabel>
+                  <Input id="fullName" name="fullName" defaultValue={defaultFullName} placeholder="Amina Yusuf" />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="resumeText">Résumé text</FieldLabel>
+                  <Textarea
+                    id="resumeText"
+                    name="resumeText"
+                    defaultValue={defaultResumeText}
+                    required
+                    rows={10}
+                    placeholder="Paste your résumé here — job titles, dates, employers, and anything you can put a number on."
+                  />
+                  <FieldDescription>
+                    Drop a PDF/DOCX or import a LinkedIn PDF — coming soon.
+                  </FieldDescription>
+                </Field>
+                <Field>
+                  <Button type="submit" className="w-full">
+                    Continue →
+                  </Button>
+                </Field>
+              </FieldGroup>
+            </form>
+          </CardContent>
+        </Card>
 
-        <label className="mb-1.5 text-[12.5px] font-semibold">Your name</label>
-        <input
-          name="fullName"
-          defaultValue={defaultFullName}
-          placeholder="Amina Yusuf"
-          className="mb-4 rounded-[9px] border border-border-strong bg-white px-3.5 py-3 text-[13px] outline-none focus:border-accent"
-        />
-
-        <label className="mb-1.5 text-[12.5px] font-semibold">Résumé text</label>
-        <textarea
-          name="resumeText"
-          defaultValue={defaultResumeText}
-          required
-          rows={12}
-          placeholder="Paste your résumé here — job titles, dates, employers, and anything you can put a number on."
-          className="rounded-2xl border-[1.5px] border-accent bg-white p-4 text-[13px] leading-relaxed outline-none"
-        />
-
-        <div className="mt-4 flex gap-2.5 opacity-50">
-          <div className="flex-1 cursor-not-allowed rounded-[9px] border border-dashed border-border-strong bg-white p-3.5 text-center text-[12.5px] font-semibold">
-            Drop a PDF or DOCX <span className="font-normal text-faint">(coming soon)</span>
-          </div>
-          <div className="flex-1 cursor-not-allowed rounded-[9px] border border-dashed border-border-strong bg-white p-3.5 text-center text-[12.5px] font-semibold">
-            Import LinkedIn PDF <span className="font-normal text-faint">(coming soon)</span>
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          className="mt-6 self-start rounded-[9px] bg-accent px-6 py-3.5 text-[13.5px] font-semibold text-white hover:bg-accent-hover"
-        >
-          Continue →
-        </button>
-      </form>
-
-      <div className="h-fit rounded-2xl border border-border bg-white p-5">
-        <div className="text-[11px] font-medium tracking-[0.09em] text-faint uppercase">
-          What happens with this
-        </div>
-        <div className="mt-3.5 flex flex-col gap-3 text-[12.5px] leading-relaxed text-[#3D3C36]">
+        <div className="mt-4 flex flex-col gap-2.5 px-2 text-[12.5px] leading-relaxed text-muted">
           {WHAT_HAPPENS.map((item) => (
             <div key={item} className="flex gap-2.5">
               <span className="flex-none font-bold text-good">✓</span>

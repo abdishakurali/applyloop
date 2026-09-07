@@ -1,16 +1,14 @@
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { ButtonLink } from "@/components/Button";
-import { SentList } from "@/components/SentList";
+import { StatusBoard } from "@/components/StatusBoard";
 import { getApplications } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function SentPage() {
-  const applications = await getApplications("sent");
-  const replies = applications.filter((a) => !!a.status_note).length;
-  const interviews = applications.filter((a) =>
-    a.status_note?.toLowerCase().includes("interview"),
-  ).length;
+  const applications = await getApplications(["sent", "interviewing", "offer", "rejected"]);
+  const interviewing = applications.filter((a) => a.status === "interviewing").length;
+  const offers = applications.filter((a) => a.status === "offer").length;
 
   return (
     <div className="flex min-h-screen flex-col bg-paper">
@@ -30,19 +28,19 @@ export default async function SentPage() {
             <div className="mt-1.5 text-[11.5px] text-muted">sent</div>
           </div>
           <div>
-            <div className="text-2xl font-bold leading-none">{replies}</div>
-            <div className="mt-1.5 text-[11.5px] text-muted">replies</div>
+            <div className="text-2xl font-bold leading-none">{interviewing}</div>
+            <div className="mt-1.5 text-[11.5px] text-muted">interviewing</div>
           </div>
           <div>
-            <div className="text-2xl font-bold leading-none">{interviews}</div>
-            <div className="mt-1.5 text-[11.5px] text-muted">interviews</div>
+            <div className="text-2xl font-bold leading-none">{offers}</div>
+            <div className="mt-1.5 text-[11.5px] text-muted">offers</div>
           </div>
           <div className="ml-auto max-w-[280px] text-xs leading-relaxed text-faint">
             You update these yourself — no inbox access in the MVP.
           </div>
         </div>
 
-        <SentList applications={applications} />
+        <StatusBoard applications={applications} />
       </div>
     </div>
   );

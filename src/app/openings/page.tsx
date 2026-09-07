@@ -10,7 +10,7 @@ export default async function OpeningsPage() {
   return (
     <div className="flex min-h-screen flex-col bg-paper">
       <WorkspaceHeader active="openings" />
-      <OpeningsBoard openings={openings} hasResume={!!profile?.resume_text} />
+      <OpeningsBoard openings={openings} hasResume={!!profile?.resume_text} profile={profile} />
     </div>
   );
 }

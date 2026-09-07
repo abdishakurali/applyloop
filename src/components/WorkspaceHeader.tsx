@@ -28,7 +28,7 @@ export function WorkspaceHeader({
             active === "sent" ? "font-semibold text-ink" : "font-medium text-faint"
           }`}
         >
-          Sent
+          Board
         </Link>
       </div>
       <div className="flex items-center gap-3">

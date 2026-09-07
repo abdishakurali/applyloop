@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { generateDraft, scoreFit } from "./anthropic";
 import { getProfile } from "./queries";
+import type { BoardStage } from "./types";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -19,6 +20,7 @@ export async function saveResume(formData: FormData) {
   const { supabase, user } = await requireUser();
   const fullName = String(formData.get("fullName") ?? "").trim();
   const resumeText = String(formData.get("resumeText") ?? "").trim();
+  const resumeName = String(formData.get("resumeName") ?? "General resume").trim();
 
   await supabase.from("profiles").upsert({
     id: user.id,
@@ -26,6 +28,14 @@ export async function saveResume(formData: FormData) {
     resume_text: resumeText || null,
     updated_at: new Date().toISOString(),
   });
+  if (resumeText) {
+    await supabase.from("resume_profiles").insert({
+      user_id: user.id,
+      name: resumeName || "General resume",
+      resume_text: resumeText,
+      is_primary: true,
+    });
+  }
   redirect("/roles");
 }
 
@@ -37,15 +47,21 @@ export async function saveRolePrefs(formData: FormData) {
     .filter(Boolean);
   const workLocations = formData.getAll("workLocations").map(String);
   const location = String(formData.get("location") ?? "").trim();
+  const locationLat = formData.get("locationLat");
+  const locationLng = formData.get("locationLng");
   const timezone = String(formData.get("timezone") ?? "").trim();
   const minBase = String(formData.get("minBase") ?? "").trim();
   const workAuth = String(formData.get("workAuth") ?? "").trim();
+  const maxDistanceKm = String(formData.get("maxDistanceKm") ?? "").trim();
 
   await supabase.from("profiles").upsert({
     id: user.id,
     roles,
     work_locations: workLocations,
     location: location || null,
+    home_lat: locationLat ? Number(locationLat) : null,
+    home_lng: locationLng ? Number(locationLng) : null,
+    max_distance_km: maxDistanceKm ? Number(maxDistanceKm) : null,
     timezone: timezone || null,
     min_base: minBase || null,
     work_auth: workAuth || null,
@@ -215,4 +231,53 @@ export async function updateApplicationStatus(applicationId: string, statusNote:
     .eq("id", applicationId)
     .eq("user_id", user.id);
   revalidatePath("/sent");
+}
+
+const BOARD_STAGES: BoardStage[] = ["sent", "interviewing", "offer", "rejected"];
+
+export async function updateApplicationStage(applicationId: string, status: BoardStage) {
+  if (!BOARD_STAGES.includes(status)) return; // never accept "drafting" here
+  const { supabase, user } = await requireUser();
+  await supabase
+    .from("applications")
+    .update({ status })
+    .eq("id", applicationId)
+    .eq("user_id", user.id);
+  revalidatePath("/sent");
+}
+
+// Answers collected by the pre-signup onboarding wizard, stashed in
+// localStorage (no session exists yet at that point) and reconciled here
+// once the user lands on /resume post-auth. Only the handful of answers
+// that drive real functionality get their own columns; everything else is
+// kept as-is for possible future use rather than given dedicated schema.
+export async function reconcileOnboardingAnswers(payload: {
+  roles?: string[];
+  location?: string;
+  locationLat?: number;
+  locationLng?: number;
+  workLocations?: string[];
+  minBase?: string;
+  workAuth?: string;
+  rest: Record<string, unknown>;
+}) {
+  const { supabase, user } = await requireUser();
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("quiz_answers")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  await supabase.from("profiles").upsert({
+    id: user.id,
+    ...(payload.roles?.length ? { roles: payload.roles } : {}),
+    ...(payload.workLocations?.length ? { work_locations: payload.workLocations } : {}),
+    ...(payload.location ? { location: payload.location } : {}),
+    ...(payload.locationLat != null ? { home_lat: payload.locationLat } : {}),
+    ...(payload.locationLng != null ? { home_lng: payload.locationLng } : {}),
+    ...(payload.minBase ? { min_base: payload.minBase } : {}),
+    ...(payload.workAuth ? { work_auth: payload.workAuth } : {}),
+    quiz_answers: { ...(existing?.quiz_answers ?? {}), ...payload.rest },
+    updated_at: new Date().toISOString(),
+  });
 }

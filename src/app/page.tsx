@@ -19,58 +19,31 @@ const STEPS = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-paper text-ink">
-      <div className="flex items-center justify-between px-8 py-5">
-        <Logo size="md" />
-        <ButtonLink href="/resume" variant="dark" className="!px-4 !py-2.5 text-[13px]">
-          Open app →
-        </ButtonLink>
-      </div>
+    <div className="min-h-screen overflow-hidden bg-[#f7f7f7] text-[#101014]">
+      <header className="sticky top-0 z-10 mx-auto mt-3 flex max-w-[1160px] items-center justify-between rounded-full border border-black/5 bg-white/90 px-6 py-3 shadow-sm backdrop-blur">
+        <div className="flex items-center gap-8"><Logo size="md" /></div>
+        <div className="flex items-center gap-5 text-[12px] font-semibold"><span className="hidden md:inline">◎ EN</span><Link href="/login">Log in</Link><ButtonLink href="/onboarding" className="!rounded-full !bg-[#6538f2] !px-5 !py-2.5">Sign up</ButtonLink></div>
+      </header>
 
-      <div className="mx-auto max-w-[760px] px-8 pt-16 pb-20 text-center">
-        <h1 className="font-serif text-[56px] leading-[1.05] font-normal text-balance">
-          Stop applying for weeks.
-          <br />
-          <em className="text-accent">Start interviewing in days.</em>
-        </h1>
-        <p className="mx-auto mt-6 max-w-[520px] text-base leading-relaxed text-muted">
-          A personal application pipeline, not a product for the masses.
-          One résumé in, real cover letters out — each one read and approved
-          by you before it goes anywhere.
-        </p>
-        <div className="mt-8 flex items-center justify-center gap-4">
-          <ButtonLink href="/resume" className="text-[14px]">
-            Start with your résumé →
-          </ButtonLink>
-          <Link href="/openings" className="text-[13.5px] font-medium text-muted">
-            or jump to openings
-          </Link>
+      <section className="mx-auto max-w-[900px] px-6 pb-20 pt-24 text-center">
+        <p className="mb-5 text-sm font-semibold text-[#6538f2]">Your AI-powered job search</p>
+        <h1 className="text-[clamp(44px,7vw,78px)] font-bold leading-[.98] tracking-[-.06em]">Get hired faster<br/><span className="text-[#6538f2]">with aiApply</span></h1>
+        <p className="mx-auto mt-7 max-w-[560px] text-lg leading-relaxed text-black/55">Stop applying for weeks. aiApply finds the right jobs, tailors your applications, and helps you land interviews in days.</p>
+        <ButtonLink href="/onboarding" className="mt-8 !rounded-full !bg-[#6538f2] !px-8 !py-4 text-[15px]">Start your free search →</ButtonLink>
+      </section>
+      <div className="mx-auto max-w-[1120px] rounded-[28px] bg-white px-6 py-8 shadow-[0_20px_80px_rgba(101,56,242,.12)] md:px-16">
+        <div className="flex flex-wrap items-center justify-center gap-10 text-sm font-semibold text-black/40"><span>Dropbox</span><span>FedEx</span><span>amazon</span><span>coinbase</span><span>Spotify</span></div>
+        <div className="mx-auto mt-12 max-w-[650px] rounded-2xl border border-black/5 bg-[#f5f5f8] p-5 shadow-xl"><div className="rounded-xl bg-white p-5 text-left"><div className="flex items-center justify-between"><div className="font-bold">Chief Marketing Officer</div><span className="rounded-full bg-[#e2f7eb] px-3 py-1 text-xs text-[#23834b]">95/100 Perfect fit</span></div><p className="mt-3 text-sm text-black/50">Lead global marketing for a high-growth SaaS company. Your experience makes this an ideal match.</p></div></div>
+        <h2 className="mx-auto mt-20 max-w-[650px] text-center text-4xl font-bold tracking-[-.05em] md:text-5xl">You are 80% more likely to get a job faster if you use aiApply</h2>
+      </div>
+      <section className="mx-auto max-w-[1120px] px-6 py-24">
+        <h2 className="text-center text-4xl font-bold tracking-[-.05em] md:text-5xl">Everything you need to get hired faster</h2>
+        <div className="mt-12 grid gap-5 md:grid-cols-3">
+          {[['PREPARE','AI Resume Creator','Generate resumes and cover letters for each job application, based on your skills and experience.'],['APPLY','Auto Apply To Jobs','Let AIApply match you to matching jobs automatically. Save time and get a job faster.'],['INTERVIEW','AI Interview Buddy','Practice answers and get real-time support for every interview question.']].map(([k,t,b]) => <article key={t} className="rounded-3xl bg-white p-7 shadow-sm"><div className="text-xs font-semibold text-[#6538f2]">{k}</div><h3 className="mt-4 text-2xl font-bold tracking-[-.04em]">{t}</h3><p className="mt-3 text-sm leading-relaxed text-black/55">{b}</p><div className="mt-8 h-32 rounded-2xl bg-gradient-to-br from-[#f0eaff] to-[#fff]" /></article>)}
         </div>
-      </div>
-
-      <div className="mx-auto grid max-w-[1120px] grid-cols-3 gap-4 px-8 pb-20">
-        {STEPS.map((step, i) => (
-          <div
-            key={step.title}
-            className="rounded-2xl border border-border bg-white p-6"
-          >
-            <div className="flex size-7 items-center justify-center rounded-full bg-ink text-[12px] font-bold text-white">
-              {i + 1}
-            </div>
-            <div className="mt-4 text-[15px] font-semibold">{step.title}</div>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted">{step.body}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between bg-ink px-8 py-9 text-[#F4F2ED]">
-        <div className="font-serif text-[26px] leading-tight font-normal">
-          Your next role is already posted somewhere.
-        </div>
-        <ButtonLink href="/resume" variant="primary" className="text-[13.5px]">
-          Start →
-        </ButtonLink>
-      </div>
+      </section>
+      <section className="bg-[#6538f2] px-6 py-24 text-center text-white"><h2 className="text-4xl font-bold tracking-[-.05em] md:text-6xl">Stop applying for weeks.<br/>Start interviewing in days.</h2><ButtonLink href="/onboarding" className="mt-8 !rounded-full !bg-white !px-8 !py-4 !text-[#6538f2]">Get started for free →</ButtonLink></section>
+      <footer className="mx-auto max-w-[1120px] px-6 py-20 text-sm text-black/45"><Logo size="md" /></footer>
     </div>
   );
 }

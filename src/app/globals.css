@@ -120,6 +120,86 @@ body {
   color: var(--ink);
 }
 
+/* Recording-matched onboarding surface. Keep this scoped so the application
+   workspace retains its own component treatment. */
+.onboarding-shell {
+  background:
+    radial-gradient(circle at 0 0, rgba(140, 105, 255, .16), transparent 28%),
+    radial-gradient(circle at 100% 100%, rgba(114, 245, 195, .14), transparent 24%),
+    #f1f6f9;
+}
+.onboarding-step { animation: onboarding-step-in .28s ease-out both; }
+@keyframes onboarding-step-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.onboarding-shell [data-slot="card"] {
+  background: transparent;
+  box-shadow: none;
+  ring: none;
+}
+.onboarding-login [data-slot="card"] {
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(100,57,241,.10);
+  border-radius: 24px;
+  padding: 12px;
+  box-shadow: 0 18px 50px rgba(48,36,110,.10);
+}
+.onboarding-login [data-slot="card-header"] { padding: 24px 20px 14px; }
+.onboarding-login [data-slot="card-content"] { padding: 0 20px 20px; }
+.onboarding-login [data-slot="card-title"] { font-size: 25px; letter-spacing: -.05em; }
+.onboarding-login [data-slot="card-description"] { margin-top: 7px; font-size: 13px; color: rgba(16,16,20,.52); }
+.onboarding-login button { transition: transform .16s ease, box-shadow .16s ease; }
+.onboarding-login button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(48,36,110,.10); }
+.onboarding-login > .text-center { font-size: 11px; line-height: 1.55; color: rgba(16,16,20,.48); }
+.onboarding-shell [data-slot="card"] h1 {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 500;
+  letter-spacing: -.045em;
+}
+.onboarding-shell [data-slot="card"] button[class*="outline"] {
+  min-height: 48px;
+  border-color: rgba(125, 125, 145, .18);
+  border-radius: 10px;
+  background: rgba(255,255,255,.86);
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+.onboarding-shell [data-slot="card"] button[class*="outline"]:hover,
+.onboarding-shell [data-slot="card"] button[class*="accent-tint"] {
+  border-color: #6439f1;
+  background: #eeeaff;
+  color: #6439f1;
+}
+.onboarding-shell [data-slot="card"] > button:not([class*="outline"]) {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  width: min(370px, calc(100vw - 48px));
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #6439f1;
+  min-height: 46px;
+  box-shadow: 0 8px 20px rgba(100,57,241,.22);
+}
+/* shadcn buttons include `outline-none` in their utility list; target the
+   actual card-level CTA structurally so it cannot inherit option styling. */
+.onboarding-shell [data-slot="card"] > button {
+  position: fixed !important;
+  bottom: 18px !important;
+  left: 50% !important;
+  width: min(370px, calc(100vw - 48px)) !important;
+  min-height: 46px !important;
+  transform: translateX(-50%) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #6439f1 !important;
+  color: white !important;
+  box-shadow: 0 8px 20px rgba(100,57,241,.22) !important;
+  z-index: 50 !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

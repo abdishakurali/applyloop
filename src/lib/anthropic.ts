@@ -63,6 +63,7 @@ const DRAFT_SYSTEM_PROMPT = `You write cover letters in a specific candidate's o
 - Every claim must trace back to something actually in the résumé provided. Never invent facts, numbers, employers, or credentials not present in the résumé.
 - Include exactly one specific, slightly unflattering or unglamorous detail (e.g. a real friction, a slow part of the work, an argument, a mistake) — the kind of honest detail a template would never include.
 - 3-4 short paragraphs. No greeting line, no "Dear Hiring Manager", no subject line, no signoff name — just the letter body.
+- Before returning the draft, apply a humanizer pass: remove inflated significance, vague sales language, forced groups of three, repetitive sentence openings, chatbot residue, and decorative filler. Keep every factual claim grounded in the résumé.
 
 Reply with ONLY a JSON object, no markdown fences, no other text:
 {

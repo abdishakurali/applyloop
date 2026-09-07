@@ -8,6 +8,10 @@ export type Profile = {
   work_locations: string[];
   min_base: string | null;
   work_auth: string | null;
+  home_lat: number | null;
+  home_lng: number | null;
+  max_distance_km: number | null;
+  quiz_answers: Record<string, unknown>;
 };
 
 export type Opening = {
@@ -24,9 +28,16 @@ export type Opening = {
   selected: boolean;
   archived: boolean;
   created_at: string;
+  source: string;
+  external_id: string | null;
+  lat: number | null;
+  lng: number | null;
+  remote: boolean;
+  fetched_at: string;
 };
 
-export type ApplicationStatus = "drafting" | "sent";
+export type ApplicationStatus = "drafting" | "sent" | "interviewing" | "offer" | "rejected";
+export type BoardStage = "sent" | "interviewing" | "offer" | "rejected";
 
 export type Application = {
   id: string;

@@ -3,25 +3,56 @@
 import { useMemo, useState, useTransition } from "react";
 import { addOpening, draftSelectedOpenings, toggleOpeningSelected } from "@/lib/actions";
 import { SalaryRangeSlider } from "@/components/SalaryRangeSlider";
+import { RoleCombobox } from "@/components/RoleCombobox";
 import { SearchableSelect } from "@/components/SearchableSelect";
-import type { Opening } from "@/lib/types";
+import { haversineKm } from "@/lib/geo";
+import type { Opening, Profile } from "@/lib/types";
 
 const FIT_LEVELS = [0, 70, 85] as const;
+const DISTANCE_LEVELS = [0, 25, 50, 100] as const;
+type SourceFilter = "all" | "manual" | "auto";
 
 export function OpeningsBoard({
   openings,
   hasResume,
+  profile,
 }: {
   openings: Opening[];
   hasResume: boolean;
+  profile: Profile | null;
 }) {
   const [fitFilter, setFitFilter] = useState<(typeof FIT_LEVELS)[number]>(0);
+  const [remoteOnly, setRemoteOnly] = useState(false);
+  const [distanceFilter, setDistanceFilter] = useState<(typeof DISTANCE_LEVELS)[number]>(0);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [showAdd, setShowAdd] = useState(openings.length === 0);
   const [isPending, startTransition] = useTransition();
 
+  const home = useMemo(
+    () =>
+      profile?.home_lat != null && profile?.home_lng != null
+        ? { lat: profile.home_lat, lng: profile.home_lng }
+        : null,
+    [profile],
+  );
+
   const visible = useMemo(
-    () => openings.filter((o) => (o.fit_score ?? 0) >= fitFilter || o.fit_score === null),
-    [openings, fitFilter],
+    () =>
+      openings.filter((o) => {
+        if (!((o.fit_score ?? 0) >= fitFilter || o.fit_score === null)) return false;
+        if (remoteOnly && !o.remote) return false;
+        if (sourceFilter === "manual" && o.source !== "manual") return false;
+        if (sourceFilter === "auto" && o.source === "manual") return false;
+        if (distanceFilter > 0 && home && !o.remote) {
+          // No coordinates (any manual entry) never gets hidden by a
+          // distance filter it structurally can't satisfy.
+          if (o.lat != null && o.lng != null) {
+            if (haversineKm(home, { lat: o.lat, lng: o.lng }) > distanceFilter) return false;
+          }
+        }
+        return true;
+      }),
+    [openings, fitFilter, remoteOnly, distanceFilter, sourceFilter, home],
   );
 
   const selected = openings.filter((o) => o.selected);
@@ -38,7 +69,7 @@ export function OpeningsBoard({
 
   return (
     <>
-      <div className="flex items-center gap-2.5 border-b border-border bg-white px-7 py-3.5">
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-border bg-white px-7 py-3.5">
         {FIT_LEVELS.map((level) => (
           <button
             key={level}
@@ -53,6 +84,41 @@ export function OpeningsBoard({
             {level === 0 ? "All fits" : `Fit ${level}%+`}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setRemoteOnly((v) => !v)}
+          className={`rounded-lg px-3.5 py-2 text-[12.5px] font-semibold ${
+            remoteOnly
+              ? "border border-accent bg-accent-tint text-accent"
+              : "border border-border-strong bg-white text-muted"
+          }`}
+        >
+          Remote only
+        </button>
+        {home &&
+          DISTANCE_LEVELS.map((level) => (
+            <button
+              key={level}
+              type="button"
+              onClick={() => setDistanceFilter(level)}
+              className={`rounded-lg px-3.5 py-2 text-[12.5px] font-semibold ${
+                distanceFilter === level
+                  ? "border border-accent bg-accent-tint text-accent"
+                  : "border border-border-strong bg-white text-muted"
+              }`}
+            >
+              {level === 0 ? "Any distance" : `${level}km`}
+            </button>
+          ))}
+        <select
+          value={sourceFilter}
+          onChange={(e) => setSourceFilter(e.target.value as SourceFilter)}
+          className="rounded-lg border border-border-strong bg-white px-3 py-2 text-[12.5px] font-medium text-muted outline-none"
+        >
+          <option value="all">All sources</option>
+          <option value="manual">Added by me</option>
+          <option value="auto">Auto-pulled</option>
+        </select>
         <span className="text-[12.5px] text-muted">
           {visible.length} opening{visible.length === 1 ? "" : "s"}
           {hasResume ? "" : " · add a résumé on step 1 to score fit"}
@@ -74,12 +140,7 @@ export function OpeningsBoard({
           }}
           className="mx-auto grid w-full max-w-[1120px] grid-cols-2 gap-3 border-b border-border bg-white px-7 py-5"
         >
-          <SearchableSelect
-            name="title"
-            required
-            endpoint="/api/roles"
-            placeholder="Role — search or type your own"
-          />
+          <RoleCombobox name="title" placeholder="Role — search or type your own" />
           <input
             name="company"
             required
@@ -143,7 +204,7 @@ export function OpeningsBoard({
                     {o.title} · {o.company}
                   </div>
                   <div className="mt-1 text-[11.5px] text-muted">
-                    {[o.location, o.comp].filter(Boolean).join(" · ")}
+                    {[o.location, o.comp, o.posted_label].filter(Boolean).join(" · ")}
                   </div>
                   {o.fit_rationale && (
                     <div className="mt-1 text-[11px] text-faint">{o.fit_rationale}</div>
