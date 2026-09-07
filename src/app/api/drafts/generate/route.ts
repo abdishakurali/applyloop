@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateDraft, localDraft } from "@/lib/anthropic";
 import { createClient } from "@/utils/supabase/server";
+import { chooseResume } from "@/lib/resumeMatch";
 
 export const maxDuration = 60;
 
@@ -9,8 +10,9 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [{ data: profile }, { data: applications }] = await Promise.all([
+  const [{ data: profile }, { data: resumeProfiles }, { data: applications }] = await Promise.all([
     supabase.from("profiles").select("full_name, resume_text").eq("id", user.id).maybeSingle(),
+    supabase.from("resume_profiles").select("name, target_roles, resume_text").eq("user_id", user.id),
     supabase.from("applications").select("id, opening_id, draft_text, opening:openings(*)").eq("user_id", user.id).eq("status", "drafting").order("created_at", { ascending: true }),
   ]);
   const resumeText = profile?.resume_text ?? "";
@@ -20,12 +22,13 @@ export async function POST() {
   for (const app of pending) {
     const opening = Array.isArray(app.opening) ? app.opening[0] : app.opening;
     if (!opening) continue;
+    const selectedResume = chooseResume(resumeProfiles ?? [], opening.title, resumeText);
     try {
-      const draft = await generateDraft(resumeText, profile?.full_name ?? "You", opening);
+      const draft = await generateDraft(selectedResume.text, profile?.full_name ?? "You", opening);
       await supabase.from("applications").update({ draft_text: draft.letter, draft_highlight: draft.highlight, draft_missing: draft.missing, signoff: draft.signoff }).eq("id", app.id).eq("user_id", user.id);
     } catch (error) {
       console.error("draft generation failed", error);
-      const fallback = localDraft(resumeText, profile?.full_name ?? "You", opening);
+      const fallback = localDraft(selectedResume.text, profile?.full_name ?? "You", opening);
       await supabase.from("applications").update({ draft_text: fallback.letter, draft_highlight: fallback.highlight, draft_missing: fallback.missing, signoff: fallback.signoff }).eq("id", app.id).eq("user_id", user.id);
     }
   }

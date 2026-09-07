@@ -3,25 +3,13 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { draftSelectedOpenings, setOpeningsSelected, toggleOpeningSelected } from "@/lib/actions";
+import { CompanyLogo } from "@/components/CompanyLogo";
 import { haversineKm } from "@/lib/geo";
 import type { Opening, Profile } from "@/lib/types";
 
 const FIT_LEVELS = [0, 70, 85] as const;
 const DISTANCE_LEVELS = [0, 25, 50, 100] as const;
 type SourceFilter = "all" | "manual" | "auto" | string;
-
-function CompanyLogo({ company, logoUrl }: { company: string; logoUrl: string | null }) {
-  const [failed, setFailed] = useState(false);
-  const initials = company.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-  return (
-    <span className="flex size-10 flex-none items-center justify-center overflow-hidden rounded-xl bg-accent-tint text-[11px] font-bold text-accent">
-      {logoUrl && !failed ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoUrl} alt={`${company} logo`} onError={() => setFailed(true)} className="size-full object-contain" />
-      ) : initials}
-    </span>
-  );
-}
 
 function postedLabel(value: string | null) {
   if (!value) return "Date not listed";
@@ -97,13 +85,13 @@ export function OpeningsBoard({ openings, hasResume, profile }: { openings: Open
           {visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border-strong bg-white p-10 text-center"><div className="text-[15px] font-semibold">No openings match these filters</div><p className="mt-2 text-[12px] text-muted">Clear a filter or update your preferences to widen the feed.</p></div> : <div className="flex flex-col gap-2.5">
             {visible.map((opening) => { const isActive = active?.id === opening.id; return <div key={opening.id} onClick={() => setDetailOpening(opening)} className={`group flex cursor-pointer items-start gap-3.5 rounded-2xl border bg-white p-4 text-left transition ${isActive ? "border-accent shadow-[0_0_0_2px_rgba(43,63,232,.08)]" : "border-border hover:border-border-strong"}`}>
               <button type="button" aria-label={opening.selected ? `Remove ${opening.title} from queue` : `Add ${opening.title} to queue`} onClick={(event) => { event.stopPropagation(); toggle(opening); }} className={`mt-1 flex size-[18px] flex-none items-center justify-center rounded-[6px] border ${opening.selected ? "border-accent bg-accent text-white" : "border-border-strong bg-white"}`}>{opening.selected && <span className="text-[12px] leading-none">✓</span>}</button>
-              <CompanyLogo company={opening.company} logoUrl={opening.logo_url} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><div className="truncate text-[14px] font-semibold">{opening.title}</div><FitBadge opening={opening} /></div><div className="mt-1 text-[12px] font-medium text-muted">{opening.company}</div><div className="mt-2 truncate text-[11.5px] text-faint">{[opening.location, opening.comp, postedLabel(opening.posted_label), opening.publisher ?? opening.source].filter(Boolean).join(" · ")}</div></div><span className="mt-1 text-[16px] text-faint transition group-hover:translate-x-0.5">→</span>
+              <CompanyLogo company={opening.company} logoUrl={opening.logo_url} employerWebsite={opening.employer_website} url={opening.url} publisher={opening.publisher} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><div className="truncate text-[14px] font-semibold">{opening.title}</div><FitBadge opening={opening} /></div><div className="mt-1 text-[12px] font-medium text-muted">{opening.company}</div><div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11.5px] text-faint">{[opening.location, opening.comp, postedLabel(opening.posted_label)].filter(Boolean).join(" · ")}<span className="rounded-full bg-tint px-2 py-0.5 text-[10px] font-semibold text-muted">{opening.publisher ?? opening.source}</span></div></div><span className="mt-1 text-[16px] text-faint transition group-hover:translate-x-0.5">→</span>
             </div>; })}
           </div>}
         </section>
 
         <aside className="min-h-0 overflow-y-auto rounded-2xl border border-border bg-white p-5">
-          {active ? <><div className="flex items-start gap-3"><CompanyLogo company={active.company} logoUrl={active.logo_url} /><div className="min-w-0 flex-1"><div className="text-[16px] font-semibold leading-tight tracking-[-.02em]">{active.title}</div><div className="mt-1 text-[12px] text-muted">{active.company}</div></div></div>
+          {active ? <><div className="flex items-start gap-3"><CompanyLogo company={active.company} logoUrl={active.logo_url} employerWebsite={active.employer_website} url={active.url} publisher={active.publisher} /><div className="min-w-0 flex-1"><div className="text-[16px] font-semibold leading-tight tracking-[-.02em]">{active.title}</div><div className="mt-1 text-[12px] text-muted">{active.company}</div></div></div>
             <div className="mt-4 flex flex-wrap gap-1.5 text-[11px]"><FitBadge opening={active}/>{active.employment_type && <span className="rounded-full bg-tint px-2.5 py-1 text-muted">{active.employment_type}</span>}{active.remote && <span className="rounded-full bg-good-tint px-2.5 py-1 font-semibold text-good">Remote</span>}{active.publisher && <span className="rounded-full bg-tint px-2.5 py-1 text-muted">{active.publisher}</span>}</div>
             <div className="mt-5 border-t border-border pt-4"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-faint">Why it matches</div><div className="mt-2 text-[12px] leading-relaxed text-muted">{active.fit_rationale ?? "Fit will be calculated when a résumé is available."}</div></div>
             <div className="mt-5 border-t border-border pt-4"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-faint">Listing source</div><div className="mt-2 text-[12px] font-semibold text-ink">{active.publisher ?? active.source}</div><div className="mt-1 break-all text-[11px] leading-relaxed text-muted">Reference: {active.external_id ?? "manual"}</div><div className="mt-1 text-[11px] leading-relaxed text-muted">{sourceConfidence(active).detail}</div></div>

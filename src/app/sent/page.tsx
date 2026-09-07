@@ -25,7 +25,7 @@ export default async function SentPage() {
         <div className="flex flex-wrap items-baseline gap-5 rounded-2xl border border-border bg-white p-4">
           <div>
             <div className="text-2xl font-bold leading-none">{applications.length}</div>
-            <div className="mt-1.5 text-[11.5px] text-muted">ready to submit</div>
+            <div className="mt-1.5 text-[11.5px] text-muted">approved, not submitted</div>
           </div>
           <div>
             <div className="text-2xl font-bold leading-none">{interviewing}</div>
@@ -36,7 +36,7 @@ export default async function SentPage() {
             <div className="mt-1.5 text-[11.5px] text-muted">offers</div>
           </div>
           <div className="ml-auto max-w-[280px] text-xs leading-relaxed text-faint">
-            You update these yourself — no inbox access in the MVP.
+            No external site or email is contacted from this screen. Open the original posting to submit manually.
           </div>
         </div>
 

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { generateDraft, generateResume, localDraft, localFitScore, scoreFit } from "./anthropic";
 import { getProfile } from "./queries";
+import { chooseResume } from "./resumeMatch";
 import type { BoardStage } from "./types";
 
 async function requireUser() {
@@ -198,7 +199,9 @@ export async function regenerateDraft(applicationId: string, tone: string) {
   if (!app) return;
 
   const profile = await getProfile();
-  const resumeText = profile?.resume_text ?? "";
+  const { data: resumeProfiles } = await supabase.from("resume_profiles").select("name, target_roles, resume_text").eq("user_id", user.id);
+  const selectedResume = chooseResume(resumeProfiles ?? [], app.opening.title, profile?.resume_text ?? "");
+  const resumeText = selectedResume.text;
   const fullName = profile?.full_name ?? "You";
 
   try {
@@ -237,6 +240,7 @@ export async function updateApplicationDraft(applicationId: string, text: string
 }
 
 export async function sendApplications(ids: string[]) {
+  // Internal approval only. This does not submit to an employer, ATS, job board, or email.
   const { supabase, user } = await requireUser();
   if (ids.length === 0) return;
   await supabase

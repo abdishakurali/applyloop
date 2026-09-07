@@ -6,7 +6,7 @@ import { updateApplicationStage, updateApplicationStatus } from "@/lib/actions";
 import type { ApplicationWithOpening, BoardStage } from "@/lib/types";
 
 const STAGES: { status: BoardStage; label: string }[] = [
-  { status: "sent", label: "Ready to submit" },
+  { status: "sent", label: "Approved — not submitted" },
   { status: "interviewing", label: "Interviewing" },
   { status: "offer", label: "Offer" },
   { status: "rejected", label: "Rejected" },

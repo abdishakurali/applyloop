@@ -16,9 +16,8 @@ export function SendConfirm({ applications }: { applications: ApplicationWithOpe
           Approve {applications.length} application{applications.length === 1 ? "" : "s"}?
         </h2>
         <p className="mt-2.5 mb-5.5 text-[13.5px] leading-relaxed text-muted">
-          This moves reviewed applications into your ready-to-submit tracker.
-          Applyloop does not claim an external submission until that company&apos;s
-          application page or email is actually completed.
+          This approves reviewed drafts inside Applyloop. It does not open Indeed,
+          an ATS, or email, and no external application is submitted here.
         </p>
 
         <div className="flex flex-col gap-2.5">
@@ -62,7 +61,7 @@ export function SendConfirm({ applications }: { applications: ApplicationWithOpe
             disabled={ready.length === 0 || isPending}
             className="flex-1 rounded-[9px] bg-accent py-3.5 text-center text-[13.5px] font-semibold text-white hover:bg-accent-hover disabled:opacity-40"
           >
-            Mark {ready.length} ready to submit
+            Approve {ready.length} for manual submission
           </button>
           <Link
             href="/draft"
