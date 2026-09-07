@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 import { SignOutButton } from "./SignOutButton";
 
-export type WorkspaceSection = "openings" | "sent" | "roles" | "resume" | "draft" | "billing";
+export type WorkspaceSection = "dashboard" | "openings" | "sent" | "profile" | "roles" | "resume" | "draft" | "billing";
 
 export function WorkspaceHeader({
   active,
@@ -16,7 +16,7 @@ export function WorkspaceHeader({
       <div className="flex items-center gap-3.5">
         <Logo />
         <div className="h-5 w-px bg-border" />
-        <span className="text-[12px] font-semibold capitalize text-muted">{active === "sent" ? "Applications" : active === "resume" ? "Résumés" : active === "draft" ? "Cover letters" : active}</span>
+        <span className="text-[12px] font-semibold capitalize text-muted">{active === "sent" ? "Applications" : active === "resume" ? "Résumé" : active === "draft" ? "Draft review" : active === "dashboard" ? "Home" : active === "profile" || active === "roles" || active === "billing" ? "Profile" : "Jobs"}</span>
       </div>
       <div className="flex items-center gap-3">
         {right}

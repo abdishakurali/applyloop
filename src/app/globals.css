@@ -172,32 +172,12 @@ body {
   background: #eeeaff;
   color: #6439f1;
 }
-.onboarding-shell [data-slot="card"] > button:not([class*="outline"]) {
-  position: fixed;
-  bottom: 18px;
-  left: 50%;
-  width: min(370px, calc(100vw - 48px));
-  transform: translateX(-50%);
+.onboarding-shell [data-slot="card"] > button {
+  min-height: 46px;
   border-radius: 999px;
   background: #6439f1;
-  min-height: 46px;
+  color: white;
   box-shadow: 0 8px 20px rgba(100,57,241,.22);
-}
-/* shadcn buttons include `outline-none` in their utility list; target the
-   actual card-level CTA structurally so it cannot inherit option styling. */
-.onboarding-shell [data-slot="card"] > button {
-  position: fixed !important;
-  bottom: 18px !important;
-  left: 50% !important;
-  width: min(370px, calc(100vw - 48px)) !important;
-  min-height: 46px !important;
-  transform: translateX(-50%) !important;
-  border: 0 !important;
-  border-radius: 999px !important;
-  background: #6439f1 !important;
-  color: white !important;
-  box-shadow: 0 8px 20px rgba(100,57,241,.22) !important;
-  z-index: 50 !important;
 }
 
 @layer base {

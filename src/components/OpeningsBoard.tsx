@@ -114,7 +114,7 @@ export function OpeningsBoard({ openings, hasResume, profile }: { openings: Open
         </aside>
       </div>
 
-      <div className="sticky bottom-0 flex items-center justify-between border-t border-[#2d2d25] bg-ink px-7 py-3.5 text-paper"><div><strong className="text-[13px]">{selected.length} queued</strong><span className="ml-2 text-[12px] text-paper/55">Review each draft before anything is sent.</span></div><button type="button" onClick={() => startTransition(() => draftSelectedOpenings())} disabled={selected.length === 0 || isPending} className="rounded-xl bg-accent px-5 py-3 text-[12.5px] font-bold text-white disabled:opacity-40">{isPending ? "Preparing…" : `Prepare ${selected.length || "your"} draft${selected.length === 1 ? "" : "s"} →`}</button></div>
+      {selected.length > 0 && <div className="sticky bottom-0 z-10 flex items-center justify-between border-t border-[#2d2d25] bg-ink px-7 py-3.5 text-paper shadow-[0_-10px_24px_rgba(20,20,15,.12)]"><div><strong className="text-[13px]">{selected.length} queued</strong><span className="ml-2 text-[12px] text-paper/55">Drafts prepare in the background.</span></div><button type="button" onClick={() => startTransition(() => draftSelectedOpenings())} disabled={isPending} className="rounded-xl bg-accent px-5 py-3 text-[12.5px] font-bold text-white disabled:opacity-40">{isPending ? "Opening queue…" : `Review ${selected.length} draft${selected.length === 1 ? "" : "s"} →`}</button></div>}
     </div>
   );
 }

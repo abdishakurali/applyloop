@@ -1,17 +1,13 @@
 import Link from "next/link";
-import { BarChart3, BriefcaseBusiness, CreditCard, FileText, FolderKanban, Mail, Settings2, Sparkles, type LucideIcon } from "lucide-react";
+import { BriefcaseBusiness, FolderKanban, Home, UserRound, type LucideIcon } from "lucide-react";
 
-export type NavItem = "Job board" | "Auto-apply" | "Applications" | "Resume builder" | "Cover letters" | "Interview prep" | "Billing" | "Settings";
+export type NavItem = "Home" | "Jobs" | "Applications" | "Profile";
 
 const NAV_ITEMS: ReadonlyArray<{ label: NavItem; href: string; icon: LucideIcon }> = [
-  { label: "Job board", href: "/openings", icon: BriefcaseBusiness },
-  { label: "Auto-apply", href: "/draft", icon: Sparkles },
+  { label: "Home", href: "/dashboard", icon: Home },
+  { label: "Jobs", href: "/openings", icon: BriefcaseBusiness },
   { label: "Applications", href: "/sent", icon: FolderKanban },
-  { label: "Resume builder", href: "/resume", icon: FileText },
-  { label: "Cover letters", href: "/draft", icon: Mail },
-  { label: "Interview prep", href: "/sent", icon: BarChart3 },
-  { label: "Billing", href: "/billing", icon: CreditCard },
-  { label: "Settings", href: "/roles", icon: Settings2 },
+  { label: "Profile", href: "/profile", icon: UserRound },
 ] as const;
 
 /**
@@ -19,7 +15,7 @@ const NAV_ITEMS: ReadonlyArray<{ label: NavItem; href: string; icon: LucideIcon 
  * technology and tooltips, while the visual navigation stays icon-led.
  */
 export function AppSidebar({
-  active = "Job board",
+  active = "Home",
   userName = "Amina Yusuf",
 }: {
   active?: NavItem;
@@ -27,7 +23,7 @@ export function AppSidebar({
 }) {
   return (
     <div className="flex w-[76px] flex-none flex-col items-center gap-6 bg-ink px-3 py-5 text-[#F4F2ED]">
-      <Link href="/openings" aria-label="Applyloop dashboard" title="Applyloop dashboard" className="flex size-10 items-center justify-center rounded-xl bg-accent text-[15px] font-bold text-white">
+      <Link href="/dashboard" aria-label="Applyloop home" title="Applyloop home" className="flex size-10 items-center justify-center rounded-xl bg-accent text-[15px] font-bold text-white">
         A
       </Link>
       <div className="flex w-full flex-col items-center gap-2">

@@ -1,0 +1,35 @@
+import { NextResponse } from "next/server";
+import { generateDraft, localDraft } from "@/lib/anthropic";
+import { createClient } from "@/utils/supabase/server";
+
+export const maxDuration = 60;
+
+export async function POST() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const [{ data: profile }, { data: applications }] = await Promise.all([
+    supabase.from("profiles").select("full_name, resume_text").eq("id", user.id).maybeSingle(),
+    supabase.from("applications").select("id, opening_id, draft_text, opening:openings(*)").eq("user_id", user.id).eq("status", "drafting").order("created_at", { ascending: true }),
+  ]);
+  const resumeText = profile?.resume_text ?? "";
+  if (!resumeText.trim()) return NextResponse.json({ error: "Add a résumé before generating drafts." }, { status: 400 });
+
+  const pending = (applications ?? []).filter((app) => !app.draft_text || app.draft_text.startsWith("Draft generation failed")).slice(0, 3);
+  for (const app of pending) {
+    const opening = Array.isArray(app.opening) ? app.opening[0] : app.opening;
+    if (!opening) continue;
+    try {
+      const draft = await generateDraft(resumeText, profile?.full_name ?? "You", opening);
+      await supabase.from("applications").update({ draft_text: draft.letter, draft_highlight: draft.highlight, draft_missing: draft.missing, signoff: draft.signoff }).eq("id", app.id).eq("user_id", user.id);
+    } catch (error) {
+      console.error("draft generation failed", error);
+      const fallback = localDraft(resumeText, profile?.full_name ?? "You", opening);
+      await supabase.from("applications").update({ draft_text: fallback.letter, draft_highlight: fallback.highlight, draft_missing: fallback.missing, signoff: fallback.signoff }).eq("id", app.id).eq("user_id", user.id);
+    }
+  }
+
+  const { count } = await supabase.from("applications").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "drafting").is("draft_text", null);
+  return NextResponse.json({ generated: pending.length, remaining: count ?? 0 });
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { updateApplicationStage, updateApplicationStatus } from "@/lib/actions";
 import type { ApplicationWithOpening, BoardStage } from "@/lib/types";
 
@@ -60,18 +61,16 @@ function BoardCard({ app }: { app: ApplicationWithOpening }) {
 export function StatusBoard({ applications }: { applications: ApplicationWithOpening[] }) {
   if (applications.length === 0) {
     return (
-      <p className="mt-8 text-center text-[13px] text-muted">
-        Nothing sent yet — confirm a batch from the draft screen first.
-      </p>
+      <div className="mt-8 rounded-2xl border border-dashed border-border-strong bg-white p-10 text-center"><div className="text-[15px] font-semibold">Your pipeline is empty.</div><p className="mt-2 text-[12px] text-muted">Choose a job, review its draft, and it will appear here.</p><Link href="/openings" className="mt-4 inline-block rounded-xl bg-accent px-4 py-2.5 text-[12px] font-bold text-white">Browse openings →</Link></div>
     );
   }
 
   return (
-    <div className="mt-4.5 grid grid-cols-4 gap-3.5">
+    <div className="mt-5 grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-4">
       {STAGES.map((stage) => {
         const cards = applications.filter((a) => a.status === stage.status);
         return (
-          <div key={stage.status} className="flex flex-col gap-2.5">
+          <div key={stage.status} className="min-h-[180px] rounded-2xl border border-border bg-[#f8f8f6] p-3.5"><div className="flex flex-col gap-2.5">
             <div className="flex items-center gap-2 text-[11.5px] font-semibold text-muted">
               {stage.label}
               <span className="text-faint">{cards.length}</span>
@@ -81,7 +80,7 @@ export function StatusBoard({ applications }: { applications: ApplicationWithOpe
                 <BoardCard key={app.id} app={app} />
               ))}
             </div>
-          </div>
+          </div></div>
         );
       })}
     </div>

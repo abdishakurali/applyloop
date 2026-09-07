@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/queries";
 import { redirect } from "next/navigation";
 
 export default async function LandingPage() {
-  if (await getCurrentUser()) redirect("/openings");
+  if (await getCurrentUser()) redirect("/dashboard");
   return (
     <div className="min-h-screen overflow-hidden bg-[#f7f7f7] text-[#101014]">
       <header className="sticky top-0 z-10 mx-auto mt-3 flex max-w-[1160px] items-center justify-between rounded-full border border-black/5 bg-white/90 px-6 py-3 shadow-sm backdrop-blur">

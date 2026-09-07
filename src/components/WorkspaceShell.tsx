@@ -19,7 +19,7 @@ export async function WorkspaceShell({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (active !== "billing" && process.env.BILLING_ENFORCE === "true" && !isFreeUser(user.email)) redirect("/billing");
-  const sidebarActive: NavItem = active === "openings" ? "Job board" : active === "sent" ? "Applications" : active === "resume" ? "Resume builder" : active === "draft" ? "Cover letters" : active === "billing" ? "Billing" : "Settings";
+  const sidebarActive: NavItem = active === "dashboard" ? "Home" : active === "openings" ? "Jobs" : active === "sent" || active === "draft" ? "Applications" : "Profile";
   return (
     <div className="flex min-h-screen bg-canvas">
       <AppSidebar active={sidebarActive} userName={userName} />

@@ -38,7 +38,7 @@ export async function saveResume(formData: FormData) {
       await supabase.from("resume_profiles").insert({ user_id: user.id, name: resumeName || "General resume", target_roles: targetRoles, resume_text: resumeText, is_primary: true });
     }
   }
-  redirect("/roles");
+  redirect("/dashboard?resume=saved");
 }
 
 export async function buildResumeWithAI(formData: FormData) {
@@ -51,7 +51,7 @@ export async function buildResumeWithAI(formData: FormData) {
   await supabase.from("profiles").upsert({ id: user.id, full_name: fullName || null, resume_text: resumeText, updated_at: new Date().toISOString() });
   await supabase.from("resume_profiles").update({ is_primary: false }).eq("user_id", user.id);
   await supabase.from("resume_profiles").insert({ user_id: user.id, name: `${targetRole} resume`, target_roles: [targetRole], resume_text: resumeText, is_primary: true });
-  redirect("/openings?refresh=jobs");
+  redirect("/dashboard?resume=built");
 }
 
 export async function saveRolePrefs(formData: FormData) {
@@ -82,7 +82,7 @@ export async function saveRolePrefs(formData: FormData) {
     work_auth: workAuth || null,
     updated_at: new Date().toISOString(),
   });
-  redirect("/openings?refresh=jobs");
+  redirect("/dashboard?preferences=saved");
 }
 
 export async function addOpening(formData: FormData) {
@@ -159,7 +159,6 @@ export async function draftSelectedOpenings() {
 
   const profile = await getProfile();
   const resumeText = profile?.resume_text ?? "";
-  const fullName = profile?.full_name ?? "You";
   if (!resumeText.trim()) redirect("/resume?next=/draft");
 
   const openingIds = openings.map((opening) => opening.id);
@@ -182,27 +181,6 @@ export async function draftSelectedOpenings() {
           .single();
     if (!app) continue;
 
-    if (existing?.draft_text && !existing.draft_text.startsWith("Draft generation failed")) {
-      await supabase.from("openings").update({ selected: false }).eq("id", opening.id);
-      continue;
-    }
-
-    try {
-      const draft = await generateDraft(resumeText, fullName, opening);
-      await supabase
-        .from("applications")
-        .update({
-          draft_text: draft.letter,
-          draft_highlight: draft.highlight,
-          draft_missing: draft.missing,
-          signoff: draft.signoff,
-        })
-        .eq("id", app.id);
-    } catch (error) {
-      console.error("generateDraft failed", error);
-      const fallback = localDraft(resumeText, fullName, opening);
-      await supabase.from("applications").update({ draft_text: fallback.letter, draft_highlight: fallback.highlight, draft_missing: fallback.missing, signoff: fallback.signoff }).eq("id", app.id);
-    }
     await supabase.from("openings").update({ selected: false }).eq("id", opening.id);
   }
 
