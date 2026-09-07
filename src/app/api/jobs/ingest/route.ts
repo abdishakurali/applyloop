@@ -23,6 +23,13 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
     .eq("id", userId)
     .maybeSingle();
   if (!profile) return { inserted: 0, skipped: 0 };
+  const { data: existing } = await supabase
+    .from("openings")
+    .select("external_id")
+    .eq("user_id", userId)
+    .eq("source", "jsearch")
+    .not("external_id", "is", null);
+  const seenExternalIds = new Set((existing ?? []).map((row) => row.external_id).filter(Boolean));
   let inserted = 0;
   let skipped = 0;
   for (const role of (profile.roles ?? []).slice(0, MAX_ROLES_PER_RUN)) {
@@ -32,9 +39,13 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
     for (const job of jobs.slice(0, MAX_NEW_PER_ROLE)) {
       const mapped = mapJsearchJobToOpening(job);
       if (!mapped.description) continue;
+      if (seenExternalIds.has(mapped.externalId)) {
+        skipped++;
+        continue;
+      }
       const { error } = await supabase.from("openings").insert({ user_id: userId, title: mapped.title, company: mapped.company, location: mapped.location, comp: mapped.comp, description: mapped.description, url: mapped.url, posted_label: mapped.postedLabel, source: "jsearch", external_id: mapped.externalId, lat: mapped.lat, lng: mapped.lng, remote: mapped.remote });
       if (error?.code === "23505") skipped++;
-      else if (!error) inserted++;
+      else if (!error) { inserted++; seenExternalIds.add(mapped.externalId); }
     }
   }
   return { inserted, skipped };
@@ -67,6 +78,13 @@ export async function GET(req: NextRequest) {
   let skipped = 0;
 
   for (const profile of profiles ?? []) {
+    const { data: existing } = await supabase
+      .from("openings")
+      .select("external_id")
+      .eq("user_id", profile.id)
+      .eq("source", "jsearch")
+      .not("external_id", "is", null);
+    const seenExternalIds = new Set((existing ?? []).map((row) => row.external_id).filter(Boolean));
     const roles: string[] = (profile.roles ?? []).slice(0, MAX_ROLES_PER_RUN);
     if (roles.length === 0) continue;
 
@@ -84,6 +102,10 @@ export async function GET(req: NextRequest) {
         if (newForRole >= MAX_NEW_PER_ROLE) break;
         const mapped = mapJsearchJobToOpening(job);
         if (!mapped.description) continue;
+        if (seenExternalIds.has(mapped.externalId)) {
+          skipped++;
+          continue;
+        }
 
         const { data: row, error: insertError } = await supabase
           .from("openings")
@@ -112,6 +134,7 @@ export async function GET(req: NextRequest) {
         }
         newForRole++;
         inserted++;
+        seenExternalIds.add(mapped.externalId);
 
         if (profile.resume_text && row) {
           try {

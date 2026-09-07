@@ -31,7 +31,14 @@ export async function getOpenings(): Promise<Opening[]> {
     .eq("archived", false)
     .order("fit_score", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
-  return data ?? [];
+  const unique = new Map<string, Opening>();
+  for (const opening of data ?? []) {
+    const key = opening.source !== "manual" && opening.external_id
+      ? `${opening.source}:${opening.external_id}`
+      : opening.id;
+    if (!unique.has(key)) unique.set(key, opening);
+  }
+  return Array.from(unique.values());
 }
 
 export async function getApplications(
