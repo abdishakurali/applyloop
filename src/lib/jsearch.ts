@@ -16,6 +16,11 @@ export type ExternalJob = {
   url: string | null;
   description: string;
   postedLabel: string | null;
+  logoUrl: string | null;
+  employerWebsite: string | null;
+  publisher: string | null;
+  employmentType: string | null;
+  isDirectApply: boolean;
 };
 
 type JsearchJob = {
@@ -34,6 +39,11 @@ type JsearchJob = {
   job_apply_link?: string | null;
   job_description?: string | null;
   job_posted_at_datetime_utc?: string | null;
+  employer_logo?: string | null;
+  employer_website?: string | null;
+  job_publisher?: string | null;
+  job_employment_type?: string | null;
+  job_apply_is_direct?: boolean;
 };
 
 function getApiKey(): string {
@@ -44,12 +54,14 @@ function getApiKey(): string {
 
 export async function searchJobs(
   query: string,
-  opts: { datePosted?: "all" | "today" | "3days" | "week" | "month" } = {},
+  opts: { datePosted?: "all" | "today" | "3days" | "week" | "month"; remoteOnly?: boolean } = {},
 ): Promise<JsearchJob[]> {
   const url = new URL(`https://${JSEARCH_HOST}/search`);
   url.searchParams.set("query", query);
+  url.searchParams.set("page", "1");
   url.searchParams.set("num_pages", "1");
   url.searchParams.set("date_posted", opts.datePosted ?? "week");
+  if (opts.remoteOnly) url.searchParams.set("remote_jobs_only", "true");
 
   const res = await fetch(url, {
     headers: { "X-RapidAPI-Key": getApiKey(), "X-RapidAPI-Host": JSEARCH_HOST },
@@ -87,5 +99,10 @@ export function mapJsearchJobToOpening(job: JsearchJob): ExternalJob {
     url: job.job_apply_link ?? null,
     description: job.job_description ?? "",
     postedLabel,
+    logoUrl: job.employer_logo ?? null,
+    employerWebsite: job.employer_website ?? null,
+    publisher: job.job_publisher ?? null,
+    employmentType: job.job_employment_type ?? null,
+    isDirectApply: Boolean(job.job_apply_is_direct),
   };
 }

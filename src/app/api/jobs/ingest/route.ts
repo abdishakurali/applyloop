@@ -34,12 +34,13 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
   let skipped = 0;
   for (const role of (profile.roles ?? []).slice(0, MAX_ROLES_PER_RUN)) {
     const query = buildQuery(role, profile.work_locations ?? [], profile.location);
+    const remoteOnly = (profile.work_locations ?? []).includes("Remote — anywhere") && !(profile.work_locations ?? []).includes("On-site");
     let jobs;
-    try { jobs = await searchJobs(query); } catch { continue; }
+    try { jobs = await searchJobs(query, { datePosted: "week", remoteOnly }); } catch { continue; }
     for (const job of jobs.slice(0, MAX_NEW_PER_ROLE)) {
       const mapped = mapJsearchJobToOpening(job);
       if (!mapped.description) continue;
-      const values = { title: mapped.title, company: mapped.company, location: mapped.location, comp: mapped.comp, description: mapped.description, url: mapped.url, posted_label: mapped.postedLabel, source: "jsearch", external_id: mapped.externalId, lat: mapped.lat, lng: mapped.lng, remote: mapped.remote, fetched_at: new Date().toISOString(), archived: false };
+      const values = { title: mapped.title, company: mapped.company, location: mapped.location, comp: mapped.comp, description: mapped.description, url: mapped.url, posted_label: mapped.postedLabel, logo_url: mapped.logoUrl, employer_website: mapped.employerWebsite, publisher: mapped.publisher, employment_type: mapped.employmentType, is_direct_apply: mapped.isDirectApply, source: "jsearch", external_id: mapped.externalId, lat: mapped.lat, lng: mapped.lng, remote: mapped.remote, fetched_at: new Date().toISOString(), archived: false };
       const existingId = existingByExternalId.get(mapped.externalId);
       if (existingId) {
         const { error } = await supabase.from("openings").update(values).eq("id", existingId).eq("user_id", userId);
@@ -93,9 +94,10 @@ export async function GET(req: NextRequest) {
 
     for (const role of roles) {
       const query = buildQuery(role, profile.work_locations ?? [], profile.location);
+      const remoteOnly = (profile.work_locations ?? []).includes("Remote — anywhere") && !(profile.work_locations ?? []).includes("On-site");
       let jobs;
       try {
-        jobs = await searchJobs(query);
+        jobs = await searchJobs(query, { datePosted: "week", remoteOnly });
       } catch {
         continue; // one role's fetch failing shouldn't abort the whole run
       }
@@ -105,7 +107,7 @@ export async function GET(req: NextRequest) {
         if (newForRole >= MAX_NEW_PER_ROLE) break;
         const mapped = mapJsearchJobToOpening(job);
         if (!mapped.description) continue;
-        const values = { title: mapped.title, company: mapped.company, location: mapped.location, comp: mapped.comp, description: mapped.description, url: mapped.url, posted_label: mapped.postedLabel, source: "jsearch", external_id: mapped.externalId, lat: mapped.lat, lng: mapped.lng, remote: mapped.remote, fetched_at: new Date().toISOString(), archived: false };
+        const values = { title: mapped.title, company: mapped.company, location: mapped.location, comp: mapped.comp, description: mapped.description, url: mapped.url, posted_label: mapped.postedLabel, logo_url: mapped.logoUrl, employer_website: mapped.employerWebsite, publisher: mapped.publisher, employment_type: mapped.employmentType, is_direct_apply: mapped.isDirectApply, source: "jsearch", external_id: mapped.externalId, lat: mapped.lat, lng: mapped.lng, remote: mapped.remote, fetched_at: new Date().toISOString(), archived: false };
         const existingId = existingByExternalId.get(mapped.externalId);
         if (existingId) {
           const { error } = await supabase.from("openings").update(values).eq("id", existingId).eq("user_id", profile.id);

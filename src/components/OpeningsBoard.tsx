@@ -13,6 +13,19 @@ const FIT_LEVELS = [0, 70, 85] as const;
 const DISTANCE_LEVELS = [0, 25, 50, 100] as const;
 type SourceFilter = "all" | "manual" | "auto";
 
+function CompanyLogo({ company, logoUrl }: { company: string; logoUrl: string | null }) {
+  const [failed, setFailed] = useState(false);
+  const initials = company.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  return (
+    <span className="flex size-[34px] flex-none items-center justify-center overflow-hidden rounded-[9px] bg-tint text-[10px] font-bold text-accent">
+      {logoUrl && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logoUrl} alt={`${company} logo`} onError={() => setFailed(true)} className="size-full object-contain" />
+      ) : initials}
+    </span>
+  );
+}
+
 function displayPostedLabel(value: string | null) {
   if (!value) return null;
   const parsed = new Date(value);
@@ -210,7 +223,7 @@ export function OpeningsBoard({
                     o.selected ? "bg-accent" : "border-[1.5px] border-border-strong"
                   }`}
                 />
-                <span className="size-[34px] flex-none rounded-[9px] bg-tint" />
+                <CompanyLogo company={o.company} logoUrl={o.logo_url} />
                 <div className="min-w-0 flex-1">
                   <div className="text-[13.5px] font-semibold leading-tight">
                     {o.title} · {o.company}
@@ -265,7 +278,7 @@ export function OpeningsBoard({
               <DialogTitle className="text-2xl tracking-[-.04em]">{detailOpening.title}</DialogTitle>
               <DialogDescription className="text-sm">{detailOpening.company} · {detailOpening.location ?? "Location not listed"}</DialogDescription>
             </DialogHeader>
-            <div className="flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-accent-tint px-3 py-1.5 font-semibold text-accent">{detailOpening.fit_score !== null ? `${detailOpening.fit_score}% fit` : "Fit pending"}</span>{detailOpening.comp && <span className="rounded-full bg-tint px-3 py-1.5">{detailOpening.comp}</span>}<span className="rounded-full bg-tint px-3 py-1.5">{detailOpening.source === "jsearch" ? "RapidAPI job" : "Added by you"}</span></div>
+            <div className="flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-accent-tint px-3 py-1.5 font-semibold text-accent">{detailOpening.fit_score !== null ? `${detailOpening.fit_score}% fit` : "Fit pending"}</span>{detailOpening.comp && <span className="rounded-full bg-tint px-3 py-1.5">{detailOpening.comp}</span>}{detailOpening.employment_type && <span className="rounded-full bg-tint px-3 py-1.5">{detailOpening.employment_type}</span>}<span className="rounded-full bg-tint px-3 py-1.5">{detailOpening.source === "jsearch" ? `JSearch${detailOpening.publisher ? ` · ${detailOpening.publisher}` : ""}` : "Added by you"}</span>{detailOpening.is_direct_apply && <span className="rounded-full bg-good-tint px-3 py-1.5 text-good">Direct apply</span>}</div>
             <div className="max-h-[42vh] overflow-auto whitespace-pre-wrap text-[13px] leading-7 text-black/70">{detailOpening.description}</div>
             <DialogFooter showCloseButton>
               {detailOpening.url && <a href={detailOpening.url} target="_blank" rel="noreferrer" className="rounded-lg border border-border-strong px-4 py-2.5 text-sm font-semibold">View original posting ↗</a>}

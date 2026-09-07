@@ -102,6 +102,11 @@ alter table openings add column if not exists lat double precision;
 alter table openings add column if not exists lng double precision;
 alter table openings add column if not exists remote boolean not null default false;
 alter table openings add column if not exists fetched_at timestamptz not null default now();
+alter table openings add column if not exists logo_url text;
+alter table openings add column if not exists employer_website text;
+alter table openings add column if not exists publisher text;
+alter table openings add column if not exists employment_type text;
+alter table openings add column if not exists is_direct_apply boolean not null default false;
 
 -- Dedup key for auto-pulled openings. Manual rows keep external_id null and
 -- are exempt — a unique index ignores rows where the indexed value is null.

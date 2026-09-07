@@ -34,6 +34,11 @@ export type Opening = {
   lng: number | null;
   remote: boolean;
   fetched_at: string;
+  logo_url: string | null;
+  employer_website: string | null;
+  publisher: string | null;
+  employment_type: string | null;
+  is_direct_apply: boolean;
 };
 
 export type ApplicationStatus = "drafting" | "sent" | "interviewing" | "offer" | "rejected";
