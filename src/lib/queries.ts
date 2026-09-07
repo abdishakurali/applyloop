@@ -33,8 +33,8 @@ export async function getOpenings(): Promise<Opening[]> {
     .order("created_at", { ascending: false });
   const unique = new Map<string, Opening>();
   for (const opening of data ?? []) {
-    const key = opening.source !== "manual" && opening.external_id
-      ? `${opening.source}:${opening.external_id}`
+    const key = opening.source !== "manual"
+      ? `${opening.source}:${opening.external_id ?? ""}:${opening.title}:${opening.company}:${opening.location ?? ""}:${opening.url ?? ""}`
       : opening.id;
     if (!unique.has(key)) unique.set(key, opening);
   }
