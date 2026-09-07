@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 import { SignOutButton } from "./SignOutButton";
+import { ThemeToggle } from "./ThemeToggle";
 
 export type WorkspaceSection = "dashboard" | "openings" | "sent" | "profile" | "roles" | "resume" | "draft" | "billing";
 
@@ -20,6 +21,7 @@ export function WorkspaceHeader({
       </div>
       <div className="flex items-center gap-3">
         {right}
+        <ThemeToggle />
         <SignOutButton />
       </div>
     </div>

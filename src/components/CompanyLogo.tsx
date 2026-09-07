@@ -7,7 +7,6 @@ type CompanyLogoProps = {
   logoUrl?: string | null;
   employerWebsite?: string | null;
   url?: string | null;
-  publisher?: string | null;
 };
 
 function hostOf(value: string | null | undefined) {
@@ -19,13 +18,8 @@ function hostOf(value: string | null | undefined) {
   }
 }
 
-function fallbackLogoUrl({ employerWebsite, url, publisher }: CompanyLogoProps) {
-  const publisherDomains: Record<string, string> = {
-    Arbeitnow: "arbeitnow.com",
-    Remotive: "remotive.com",
-    JSearch: "rapidapi.com",
-  };
-  const host = hostOf(employerWebsite) ?? hostOf(url) ?? (publisher ? publisherDomains[publisher] : null);
+function fallbackLogoUrl({ employerWebsite }: CompanyLogoProps) {
+  const host = hostOf(employerWebsite);
   return host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128` : null;
 }
 

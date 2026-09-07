@@ -120,6 +120,36 @@ body {
   color: var(--ink);
 }
 
+html.dark {
+  --ink: #f3f4f8;
+  --paper: #181a20;
+  --canvas: #101116;
+  --border: #2b2e38;
+  --border-strong: #414653;
+  --muted: #b2b6c2;
+  --faint: #7d8392;
+  --tint: #232630;
+  --accent-tint: #252a5c;
+  --good: #65d3a0;
+  --good-tint: #173b30;
+  --warn: #f2b66e;
+  --warn-tint: #4b321a;
+  --warn-tint-soft: #2b241b;
+  --warn-border: #604523;
+  --card: #1d2028;
+  --popover: #1d2028;
+  --sidebar: #0b0c10;
+}
+html.dark .bg-white { background-color: #1d2028 !important; }
+html.dark .bg-paper { background-color: var(--paper) !important; }
+html.dark .bg-canvas { background-color: var(--canvas) !important; }
+html.dark .text-ink { color: var(--ink) !important; }
+html.dark .text-muted { color: var(--muted) !important; }
+html.dark .text-faint { color: var(--faint) !important; }
+html.dark .border-border { border-color: var(--border) !important; }
+html.dark .border-border-strong { border-color: var(--border-strong) !important; }
+html.dark input, html.dark select, html.dark textarea { color: var(--ink); }
+
 /* Recording-matched onboarding surface. Keep this scoped so the application
    workspace retains its own component treatment. */
 .onboarding-shell {

@@ -39,20 +39,29 @@ export function OpeningsBoard({ openings, hasResume, profile }: { openings: Open
   const [distanceFilter, setDistanceFilter] = useState<(typeof DISTANCE_LEVELS)[number]>(0);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [locationQuery, setLocationQuery] = useState("");
+  const [directOnly, setDirectOnly] = useState(false);
+  const [employmentFilter, setEmploymentFilter] = useState("all");
   const [detailOpening, setDetailOpening] = useState<Opening | null>(openings[0] ?? null);
   const [isPending, startTransition] = useTransition();
 
   const home = useMemo(() => profile?.home_lat != null && profile?.home_lng != null ? { lat: profile.home_lat, lng: profile.home_lng } : null, [profile]);
   const visible = useMemo(() => openings.filter((opening) => {
     if (roleFilter !== "all" && !opening.title.toLowerCase().includes(roleFilter.toLowerCase())) return false;
+    const query = searchQuery.trim().toLowerCase();
+    if (query && !`${opening.title} ${opening.company} ${opening.description}`.toLowerCase().includes(query)) return false;
+    if (locationQuery.trim() && !(opening.location ?? "").toLowerCase().includes(locationQuery.trim().toLowerCase())) return false;
     if (!((opening.fit_score ?? 0) >= fitFilter || opening.fit_score === null)) return false;
     if (remoteOnly && !opening.remote) return false;
+    if (directOnly && !opening.is_direct_apply) return false;
+    if (employmentFilter !== "all" && !(opening.employment_type ?? "").toLowerCase().includes(employmentFilter)) return false;
     if (sourceFilter === "manual" && opening.source !== "manual") return false;
     if (sourceFilter === "auto" && opening.source === "manual") return false;
     if (!(["all", "manual", "auto"] as string[]).includes(sourceFilter) && (opening.publisher ?? opening.source) !== sourceFilter) return false;
     if (distanceFilter > 0 && home && !opening.remote && opening.lat != null && opening.lng != null && haversineKm(home, { lat: opening.lat, lng: opening.lng }) > distanceFilter) return false;
     return true;
-  }), [openings, fitFilter, remoteOnly, distanceFilter, sourceFilter, roleFilter, home]);
+  }), [openings, fitFilter, remoteOnly, distanceFilter, sourceFilter, roleFilter, searchQuery, locationQuery, directOnly, employmentFilter, home]);
   const sourceOptions = useMemo(() => Array.from(new Set(openings.map((opening) => opening.publisher ?? opening.source).filter(Boolean))).sort(), [openings]);
   const selected = openings.filter((opening) => opening.selected);
   const allVisibleSelected = visible.length > 0 && visible.every((opening) => opening.selected);
@@ -71,13 +80,20 @@ export function OpeningsBoard({ openings, hasResume, profile }: { openings: Open
       </div>
 
       <div className="border-b border-border bg-white px-7 py-3.5"><div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-2">
+        <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search title or company" aria-label="Search jobs" className="h-10 min-w-[220px] flex-1 rounded-xl border border-border-strong bg-white px-3 text-[12px] text-ink outline-none placeholder:text-faint focus:border-accent" />
+        <input value={locationQuery} onChange={(event) => setLocationQuery(event.target.value)} placeholder="Location" aria-label="Filter jobs by location" className="h-10 w-[150px] rounded-xl border border-border-strong bg-white px-3 text-[12px] text-ink outline-none placeholder:text-faint focus:border-accent" />
         {profile?.roles?.length ? <div className="mr-2 flex items-center gap-1 rounded-full bg-tint p-1"><button type="button" onClick={() => setRoleFilter("all")} className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${roleFilter === "all" ? "bg-ink text-white" : "text-muted"}`}>All roles</button>{profile.roles.map((role) => <button key={role} type="button" onClick={() => setRoleFilter(role)} className={`max-w-[150px] truncate rounded-full px-3 py-1.5 text-[11px] font-bold ${roleFilter === role ? "bg-ink text-white" : "text-muted"}`}>{role}</button>)}</div> : null}
+        <Link href="/roles" className="rounded-full border border-border-strong bg-white px-3.5 py-2 text-[12px] font-semibold text-muted hover:border-accent hover:text-accent">Change roles</Link>
         {FIT_LEVELS.map((level) => <button key={level} type="button" onClick={() => setFitFilter(level)} className={`rounded-full border px-3.5 py-2 text-[12px] font-semibold ${fitFilter === level ? "border-accent bg-accent text-white" : "border-border-strong bg-white text-muted"}`}>{level === 0 ? "All fits" : `Fit ${level}%+`}</button>)}
         <button type="button" onClick={() => setRemoteOnly((value) => !value)} className={`rounded-full border px-3.5 py-2 text-[12px] font-semibold ${remoteOnly ? "border-accent bg-accent text-white" : "border-border-strong bg-white text-muted"}`}>Remote only</button>
+        <button type="button" onClick={() => setDirectOnly((value) => !value)} className={`rounded-full border px-3.5 py-2 text-[12px] font-semibold ${directOnly ? "border-accent bg-accent text-white" : "border-border-strong bg-white text-muted"}`}>Direct apply</button>
         {home && DISTANCE_LEVELS.map((level) => <button key={level} type="button" onClick={() => setDistanceFilter(level)} className={`rounded-full border px-3.5 py-2 text-[12px] font-semibold ${distanceFilter === level ? "border-accent bg-accent text-white" : "border-border-strong bg-white text-muted"}`}>{level === 0 ? "Any distance" : `${level}km`}</button>)}
+        <select value={employmentFilter} onChange={(event) => setEmploymentFilter(event.target.value)} aria-label="Filter by employment type" className="rounded-full border border-border-strong bg-white px-3.5 py-2 text-[12px] font-medium text-muted outline-none"><option value="all">Any type</option><option value="full">Full-time</option><option value="part">Part-time</option><option value="contract">Contract</option><option value="intern">Internship</option></select>
         <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as SourceFilter)} aria-label="Filter by job source" className="rounded-full border border-border-strong bg-white px-3.5 py-2 text-[12px] font-medium text-muted outline-none"><option value="all">All sources</option><option value="auto">Auto-pulled</option><option value="manual">Added by me</option>{sourceOptions.map((source) => <option key={source} value={source}>{source}</option>)}</select>
         <span className="ml-auto text-[12px] text-muted">{hasResume ? "Fit scores use your primary résumé" : "Add a résumé to calculate fit"}</span>
       </div></div>
+
+      {selected.length > 0 && <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[#2d2d25] bg-ink px-7 py-3.5 text-paper shadow-[0_8px_20px_rgba(20,20,15,.12)]"><div><strong className="text-[13px]">{selected.length} queued</strong><span className="ml-2 text-[12px] text-paper/55">Drafts prepare in the background.</span></div><button type="button" onClick={() => startTransition(() => draftSelectedOpenings())} disabled={isPending} className="rounded-xl bg-accent px-5 py-3 text-[12.5px] font-bold text-white disabled:opacity-40">{isPending ? "Opening queue…" : `Review ${selected.length} draft${selected.length === 1 ? "" : "s"} →`}</button></div>}
 
       <div className="mx-auto grid min-h-0 w-full max-w-[1240px] flex-1 grid-cols-[minmax(0,1fr)_370px] gap-5 overflow-hidden px-7 py-5">
         <section className="min-h-0 overflow-y-auto pr-1">
@@ -85,13 +101,13 @@ export function OpeningsBoard({ openings, hasResume, profile }: { openings: Open
           {visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border-strong bg-white p-10 text-center"><div className="text-[15px] font-semibold">No openings match these filters</div><p className="mt-2 text-[12px] text-muted">Clear a filter or update your preferences to widen the feed.</p></div> : <div className="flex flex-col gap-2.5">
             {visible.map((opening) => { const isActive = active?.id === opening.id; return <div key={opening.id} onClick={() => setDetailOpening(opening)} className={`group flex cursor-pointer items-start gap-3.5 rounded-2xl border bg-white p-4 text-left transition ${isActive ? "border-accent shadow-[0_0_0_2px_rgba(43,63,232,.08)]" : "border-border hover:border-border-strong"}`}>
               <button type="button" aria-label={opening.selected ? `Remove ${opening.title} from queue` : `Add ${opening.title} to queue`} onClick={(event) => { event.stopPropagation(); toggle(opening); }} className={`mt-1 flex size-[18px] flex-none items-center justify-center rounded-[6px] border ${opening.selected ? "border-accent bg-accent text-white" : "border-border-strong bg-white"}`}>{opening.selected && <span className="text-[12px] leading-none">✓</span>}</button>
-              <CompanyLogo company={opening.company} logoUrl={opening.logo_url} employerWebsite={opening.employer_website} url={opening.url} publisher={opening.publisher} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><div className="truncate text-[14px] font-semibold">{opening.title}</div><FitBadge opening={opening} /></div><div className="mt-1 text-[12px] font-medium text-muted">{opening.company}</div><div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11.5px] text-faint">{[opening.location, opening.comp, postedLabel(opening.posted_label)].filter(Boolean).join(" · ")}<span className="rounded-full bg-tint px-2 py-0.5 text-[10px] font-semibold text-muted">{opening.publisher ?? opening.source}</span></div></div><span className="mt-1 text-[16px] text-faint transition group-hover:translate-x-0.5">→</span>
+              <CompanyLogo company={opening.company} logoUrl={opening.logo_url} employerWebsite={opening.employer_website} url={opening.url} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><div className="truncate text-[14px] font-semibold">{opening.title}</div><FitBadge opening={opening} /></div><div className="mt-1 text-[12px] font-medium text-muted">{opening.company}</div><div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11.5px] text-faint">{[opening.location, opening.comp, postedLabel(opening.posted_label)].filter(Boolean).join(" · ")}<span className="rounded-full bg-tint px-2 py-0.5 text-[10px] font-semibold text-muted">{opening.publisher ?? opening.source}</span></div></div><span className="mt-1 text-[16px] text-faint transition group-hover:translate-x-0.5">→</span>
             </div>; })}
           </div>}
         </section>
 
         <aside className="min-h-0 overflow-y-auto rounded-2xl border border-border bg-white p-5">
-          {active ? <><div className="flex items-start gap-3"><CompanyLogo company={active.company} logoUrl={active.logo_url} employerWebsite={active.employer_website} url={active.url} publisher={active.publisher} /><div className="min-w-0 flex-1"><div className="text-[16px] font-semibold leading-tight tracking-[-.02em]">{active.title}</div><div className="mt-1 text-[12px] text-muted">{active.company}</div></div></div>
+          {active ? <><div className="flex items-start gap-3"><CompanyLogo company={active.company} logoUrl={active.logo_url} employerWebsite={active.employer_website} url={active.url} /><div className="min-w-0 flex-1"><div className="text-[16px] font-semibold leading-tight tracking-[-.02em]">{active.title}</div><div className="mt-1 text-[12px] text-muted">{active.company}</div></div></div>
             <div className="mt-4 flex flex-wrap gap-1.5 text-[11px]"><FitBadge opening={active}/>{active.employment_type && <span className="rounded-full bg-tint px-2.5 py-1 text-muted">{active.employment_type}</span>}{active.remote && <span className="rounded-full bg-good-tint px-2.5 py-1 font-semibold text-good">Remote</span>}{active.publisher && <span className="rounded-full bg-tint px-2.5 py-1 text-muted">{active.publisher}</span>}</div>
             <div className="mt-5 border-t border-border pt-4"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-faint">Why it matches</div><div className="mt-2 text-[12px] leading-relaxed text-muted">{active.fit_rationale ?? "Fit will be calculated when a résumé is available."}</div></div>
             <div className="mt-5 border-t border-border pt-4"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-faint">Listing source</div><div className="mt-2 text-[12px] font-semibold text-ink">{active.publisher ?? active.source}</div><div className="mt-1 break-all text-[11px] leading-relaxed text-muted">Reference: {active.external_id ?? "manual"}</div><div className="mt-1 text-[11px] leading-relaxed text-muted">{sourceConfidence(active).detail}</div></div>
@@ -102,7 +118,6 @@ export function OpeningsBoard({ openings, hasResume, profile }: { openings: Open
         </aside>
       </div>
 
-      {selected.length > 0 && <div className="sticky bottom-0 z-10 flex items-center justify-between border-t border-[#2d2d25] bg-ink px-7 py-3.5 text-paper shadow-[0_-10px_24px_rgba(20,20,15,.12)]"><div><strong className="text-[13px]">{selected.length} queued</strong><span className="ml-2 text-[12px] text-paper/55">Drafts prepare in the background.</span></div><button type="button" onClick={() => startTransition(() => draftSelectedOpenings())} disabled={isPending} className="rounded-xl bg-accent px-5 py-3 text-[12.5px] font-bold text-white disabled:opacity-40">{isPending ? "Opening queue…" : `Review ${selected.length} draft${selected.length === 1 ? "" : "s"} →`}</button></div>}
     </div>
   );
 }
