@@ -48,7 +48,7 @@ export function AppSidebar({
       </div>
       <div className="mt-auto flex flex-col items-center gap-4">
         <div title="Auto-apply credits" className="flex size-10 items-center justify-center rounded-xl border border-[#F4F2ED]/16 text-[11px] font-bold text-[#A8B2FF]">148</div>
-        <div title={`${userName} · Pro plan`} className="size-8 rounded-full bg-[#3A3A33]" />
+        <div title={`${userName} · paid plan`} className="size-8 rounded-full bg-[#3A3A33]" />
       </div>
     </div>
   );
