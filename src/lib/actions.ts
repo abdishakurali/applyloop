@@ -116,7 +116,7 @@ export async function addOpening(formData: FormData) {
         .update({ fit_score: fit.score, fit_rationale: fit.rationale })
         .eq("id", inserted.id)
         .eq("user_id", user.id);
-    } catch {
+    } catch (error) {
       // Fit scoring is a nice-to-have — leave it null if Claude/the key isn't available.
     }
   }
@@ -163,7 +163,8 @@ export async function draftSelectedOpenings() {
           signoff: draft.signoff,
         })
         .eq("id", app.id);
-    } catch {
+    } catch (error) {
+      console.error("generateDraft failed", error);
       await supabase
         .from("applications")
         .update({
@@ -203,8 +204,9 @@ export async function regenerateDraft(applicationId: string, tone: string) {
         signoff: draft.signoff,
       })
       .eq("id", applicationId);
-  } catch {
-    // Leave the existing draft untouched if regeneration fails.
+    } catch (error) {
+      console.error("regenerateDraft failed", error);
+      // Leave the existing draft untouched if regeneration fails.
   }
   revalidatePath("/draft");
 }
