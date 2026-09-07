@@ -21,6 +21,8 @@ export async function saveResume(formData: FormData) {
   const fullName = String(formData.get("fullName") ?? "").trim();
   const resumeText = String(formData.get("resumeText") ?? "").trim();
   const resumeName = String(formData.get("resumeName") ?? "General resume").trim();
+  const targetRoles = String(formData.get("targetRoles") ?? "").split(",").map((value) => value.trim()).filter(Boolean);
+  const resumeProfileId = String(formData.get("resumeProfileId") ?? "").trim();
 
   await supabase.from("profiles").upsert({
     id: user.id,
@@ -29,12 +31,12 @@ export async function saveResume(formData: FormData) {
     updated_at: new Date().toISOString(),
   });
   if (resumeText) {
-    await supabase.from("resume_profiles").insert({
-      user_id: user.id,
-      name: resumeName || "General resume",
-      resume_text: resumeText,
-      is_primary: true,
-    });
+    await supabase.from("resume_profiles").update({ is_primary: false }).eq("user_id", user.id);
+    if (resumeProfileId) {
+      await supabase.from("resume_profiles").update({ name: resumeName || "General resume", target_roles: targetRoles, resume_text: resumeText, is_primary: true, updated_at: new Date().toISOString() }).eq("id", resumeProfileId).eq("user_id", user.id);
+    } else {
+      await supabase.from("resume_profiles").insert({ user_id: user.id, name: resumeName || "General resume", target_roles: targetRoles, resume_text: resumeText, is_primary: true });
+    }
   }
   redirect("/roles");
 }
@@ -47,6 +49,7 @@ export async function buildResumeWithAI(formData: FormData) {
   if (!targetRole) return;
   const resumeText = await generateResume(fullName, targetRole, context);
   await supabase.from("profiles").upsert({ id: user.id, full_name: fullName || null, resume_text: resumeText, updated_at: new Date().toISOString() });
+  await supabase.from("resume_profiles").update({ is_primary: false }).eq("user_id", user.id);
   await supabase.from("resume_profiles").insert({ user_id: user.id, name: `${targetRole} resume`, target_roles: [targetRole], resume_text: resumeText, is_primary: true });
   redirect("/openings?refresh=jobs");
 }
@@ -129,6 +132,20 @@ export async function toggleOpeningSelected(id: string, selected: boolean) {
   revalidatePath("/openings");
 }
 
+export async function setOpeningsSelected(ids: string[], selected: boolean) {
+  const { supabase, user } = await requireUser();
+  const safeIds = ids.filter(Boolean);
+  if (safeIds.length > 0) {
+    await supabase
+      .from("openings")
+      .update({ selected })
+      .in("id", safeIds)
+      .eq("user_id", user.id)
+      .eq("archived", false);
+  }
+  revalidatePath("/openings");
+}
+
 export async function draftSelectedOpenings() {
   const { supabase, user } = await requireUser();
   const { data: openings } = await supabase
@@ -144,13 +161,30 @@ export async function draftSelectedOpenings() {
   const fullName = profile?.full_name ?? "You";
   if (!resumeText.trim()) redirect("/resume?next=/draft");
 
+  const openingIds = openings.map((opening) => opening.id);
+  const { data: existingApps } = await supabase
+    .from("applications")
+    .select("id, opening_id, draft_text, status")
+    .eq("user_id", user.id)
+    .in("opening_id", openingIds)
+    .in("status", ["drafting"]);
+  const existingByOpening = new Map((existingApps ?? []).map((app) => [app.opening_id, app]));
+
   for (const opening of openings) {
-    const { data: app } = await supabase
-      .from("applications")
-      .insert({ user_id: user.id, opening_id: opening.id, status: "drafting" })
-      .select("id")
-      .single();
+    const existing = existingByOpening.get(opening.id);
+    const { data: app } = existing?.id
+      ? { data: existing }
+      : await supabase
+          .from("applications")
+          .insert({ user_id: user.id, opening_id: opening.id, status: "drafting" })
+          .select("id")
+          .single();
     if (!app) continue;
+
+    if (existing?.draft_text && !existing.draft_text.startsWith("Draft generation failed")) {
+      await supabase.from("openings").update({ selected: false }).eq("id", opening.id);
+      continue;
+    }
 
     try {
       const draft = await generateDraft(resumeText, fullName, opening);
@@ -169,6 +203,7 @@ export async function draftSelectedOpenings() {
         .from("applications")
         .update({
           draft_text: "Draft generation failed — write this one by hand.",
+          draft_missing: "AI generation is temporarily unavailable. Try Generate again.",
           signoff: fullName,
         })
         .eq("id", app.id);

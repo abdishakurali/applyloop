@@ -1,16 +1,18 @@
+import Link from "next/link";
+
 const NAV_ITEMS = [
-  "Dashboard",
-  "Job board",
-  "Auto-apply",
-  "Applications",
-  "Resume builder",
-  "Cover letters",
-  "Resume tools",
-  "Interview prep",
-  "Settings",
+  ["Dashboard", "/openings"],
+  ["Job board", "/openings"],
+  ["Auto-apply", "/openings"],
+  ["Applications", "/sent"],
+  ["Resume builder", "/resume"],
+  ["Cover letters", "/draft"],
+  ["Resume tools", "/resume"],
+  ["Interview prep", "/sent"],
+  ["Settings", "/roles"],
 ] as const;
 
-type NavItem = (typeof NAV_ITEMS)[number];
+type NavItem = (typeof NAV_ITEMS)[number][0];
 
 /**
  * Full-app navigation shell (from `AppSidebar.dc.html`). Not wired into the
@@ -34,18 +36,19 @@ export function AppSidebar({
       </div>
 
       <div className="flex flex-col gap-[3px]">
-        {NAV_ITEMS.map((label) => {
+        {NAV_ITEMS.map(([label, href]) => {
           const isActive = label === active;
           return (
-            <div
+            <Link
               key={label}
+              href={href}
               className={`flex items-center gap-2.5 rounded-lg px-[9px] py-2 text-[13px] font-medium ${
                 isActive ? "bg-accent text-white" : "text-[#F4F2ED]/62"
               }`}
             >
               <span className="size-[15px] flex-none rounded-[5px] border-[1.5px] border-current opacity-45" />
               <span>{label}</span>
-            </div>
+            </Link>
           );
         })}
       </div>

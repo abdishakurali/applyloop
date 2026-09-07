@@ -30,6 +30,8 @@ export function WorkspaceHeader({
         >
           Board
         </Link>
+        <Link href="/roles" className="text-[12.5px] font-medium text-faint">Roles</Link>
+        <Link href="/resume" className="text-[12.5px] font-medium text-faint">Résumés</Link>
       </div>
       <div className="flex items-center gap-3">
         {right}

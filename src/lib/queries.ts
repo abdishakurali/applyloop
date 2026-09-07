@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/utils/supabase/server";
-import type { ApplicationStatus, ApplicationWithOpening, Opening, Profile } from "./types";
+import type { ApplicationStatus, ApplicationWithOpening, Opening, Profile, ResumeProfile } from "./types";
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -17,6 +17,14 @@ export async function getProfile(): Promise<Profile | null> {
 
   const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
   return data;
+}
+
+export async function getResumeProfiles(): Promise<ResumeProfile[]> {
+  const supabase = await createClient();
+  const user = await getCurrentUser();
+  if (!user) return [];
+  const { data } = await supabase.from("resume_profiles").select("*").eq("user_id", user.id).order("is_primary", { ascending: false }).order("updated_at", { ascending: false });
+  return (data ?? []) as ResumeProfile[];
 }
 
 export async function getOpenings(): Promise<Opening[]> {

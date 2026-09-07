@@ -1,13 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { addOpening, draftSelectedOpenings, toggleOpeningSelected } from "@/lib/actions";
-import { SalaryRangeSlider } from "@/components/SalaryRangeSlider";
-import { RoleCombobox } from "@/components/RoleCombobox";
-import { SearchableSelect } from "@/components/SearchableSelect";
+import { draftSelectedOpenings, setOpeningsSelected, toggleOpeningSelected } from "@/lib/actions";
 import { haversineKm } from "@/lib/geo";
 import type { Opening, Profile } from "@/lib/types";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const FIT_LEVELS = [0, 70, 85] as const;
 const DISTANCE_LEVELS = [0, 25, 50, 100] as const;
@@ -17,7 +14,7 @@ function CompanyLogo({ company, logoUrl }: { company: string; logoUrl: string | 
   const [failed, setFailed] = useState(false);
   const initials = company.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return (
-    <span className="flex size-[34px] flex-none items-center justify-center overflow-hidden rounded-[9px] bg-tint text-[10px] font-bold text-accent">
+    <span className="flex size-10 flex-none items-center justify-center overflow-hidden rounded-xl bg-accent-tint text-[11px] font-bold text-accent">
       {logoUrl && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={logoUrl} alt={`${company} logo`} onError={() => setFailed(true)} className="size-full object-contain" />
@@ -26,267 +23,85 @@ function CompanyLogo({ company, logoUrl }: { company: string; logoUrl: string | 
   );
 }
 
-function displayPostedLabel(value: string | null) {
-  if (!value) return null;
+function postedLabel(value: string | null) {
+  if (!value) return "Date not listed";
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return value.startsWith("Posted ")
-    ? value
-    : `Posted ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(parsed)}`;
+  if (Number.isNaN(parsed.getTime()) || value.startsWith("Posted ")) return value;
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(parsed);
 }
 
-export function OpeningsBoard({
-  openings,
-  hasResume,
-  profile,
-}: {
-  openings: Opening[];
-  hasResume: boolean;
-  profile: Profile | null;
-}) {
+function FitBadge({ opening }: { opening: Opening }) {
+  if (opening.fit_score === null) return <span className="text-[11px] font-semibold text-faint">Fit pending</span>;
+  return <span className="rounded-full bg-good-tint px-2.5 py-1 text-[11px] font-bold text-good">{opening.fit_score}% fit</span>;
+}
+
+export function OpeningsBoard({ openings, hasResume, profile }: { openings: Opening[]; hasResume: boolean; profile: Profile | null }) {
   const [fitFilter, setFitFilter] = useState<(typeof FIT_LEVELS)[number]>(0);
   const [remoteOnly, setRemoteOnly] = useState(false);
   const [distanceFilter, setDistanceFilter] = useState<(typeof DISTANCE_LEVELS)[number]>(0);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
-  const [showAdd, setShowAdd] = useState(openings.length === 0);
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [detailOpening, setDetailOpening] = useState<Opening | null>(openings[0] ?? null);
   const [isPending, startTransition] = useTransition();
-  const [detailOpening, setDetailOpening] = useState<Opening | null>(null);
 
-  const home = useMemo(
-    () =>
-      profile?.home_lat != null && profile?.home_lng != null
-        ? { lat: profile.home_lat, lng: profile.home_lng }
-        : null,
-    [profile],
-  );
+  const home = useMemo(() => profile?.home_lat != null && profile?.home_lng != null ? { lat: profile.home_lat, lng: profile.home_lng } : null, [profile]);
+  const visible = useMemo(() => openings.filter((opening) => {
+    if (roleFilter !== "all" && !opening.title.toLowerCase().includes(roleFilter.toLowerCase())) return false;
+    if (!((opening.fit_score ?? 0) >= fitFilter || opening.fit_score === null)) return false;
+    if (remoteOnly && !opening.remote) return false;
+    if (sourceFilter === "manual" && opening.source !== "manual") return false;
+    if (sourceFilter === "auto" && opening.source === "manual") return false;
+    if (distanceFilter > 0 && home && !opening.remote && opening.lat != null && opening.lng != null && haversineKm(home, { lat: opening.lat, lng: opening.lng }) > distanceFilter) return false;
+    return true;
+  }), [openings, fitFilter, remoteOnly, distanceFilter, sourceFilter, roleFilter, home]);
+  const selected = openings.filter((opening) => opening.selected);
+  const allVisibleSelected = visible.length > 0 && visible.every((opening) => opening.selected);
+  const active = detailOpening && visible.some((opening) => opening.id === detailOpening.id) ? detailOpening : visible[0] ?? null;
 
-  const visible = useMemo(
-    () =>
-      openings.filter((o) => {
-        if (!((o.fit_score ?? 0) >= fitFilter || o.fit_score === null)) return false;
-        if (remoteOnly && !o.remote) return false;
-        if (sourceFilter === "manual" && o.source !== "manual") return false;
-        if (sourceFilter === "auto" && o.source === "manual") return false;
-        if (distanceFilter > 0 && home && !o.remote) {
-          // No coordinates (any manual entry) never gets hidden by a
-          // distance filter it structurally can't satisfy.
-          if (o.lat != null && o.lng != null) {
-            if (haversineKm(home, { lat: o.lat, lng: o.lng }) > distanceFilter) return false;
-          }
-        }
-        return true;
-      }),
-    [openings, fitFilter, remoteOnly, distanceFilter, sourceFilter, home],
-  );
-
-  const selected = openings.filter((o) => o.selected);
-
-  function toggle(o: Opening) {
-    startTransition(() => toggleOpeningSelected(o.id, !o.selected));
-  }
-
-  function selectAllShown() {
-    startTransition(() => {
-      visible.filter((o) => !o.selected).forEach((o) => toggleOpeningSelected(o.id, true));
-    });
-  }
+  function toggle(opening: Opening) { startTransition(() => toggleOpeningSelected(opening.id, !opening.selected)); }
+  function selectAllShown() { startTransition(() => setOpeningsSelected(visible.map((opening) => opening.id), !allVisibleSelected)); }
 
   return (
-    <>
-      <div className="flex flex-wrap items-center gap-2.5 border-b border-border bg-white px-7 py-3.5">
-        {FIT_LEVELS.map((level) => (
-          <button
-            key={level}
-            type="button"
-            onClick={() => setFitFilter(level)}
-            className={`rounded-lg px-3.5 py-2 text-[12.5px] font-semibold ${
-              fitFilter === level
-                ? "border border-accent bg-accent-tint text-accent"
-                : "border border-border-strong bg-white text-muted"
-            }`}
-          >
-            {level === 0 ? "All fits" : `Fit ${level}%+`}
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => setRemoteOnly((v) => !v)}
-          className={`rounded-lg px-3.5 py-2 text-[12.5px] font-semibold ${
-            remoteOnly
-              ? "border border-accent bg-accent-tint text-accent"
-              : "border border-border-strong bg-white text-muted"
-          }`}
-        >
-          Remote only
-        </button>
-        {home &&
-          DISTANCE_LEVELS.map((level) => (
-            <button
-              key={level}
-              type="button"
-              onClick={() => setDistanceFilter(level)}
-              className={`rounded-lg px-3.5 py-2 text-[12.5px] font-semibold ${
-                distanceFilter === level
-                  ? "border border-accent bg-accent-tint text-accent"
-                  : "border border-border-strong bg-white text-muted"
-              }`}
-            >
-              {level === 0 ? "Any distance" : `${level}km`}
-            </button>
-          ))}
-        <select
-          value={sourceFilter}
-          onChange={(e) => setSourceFilter(e.target.value as SourceFilter)}
-          className="rounded-lg border border-border-strong bg-white px-3 py-2 text-[12.5px] font-medium text-muted outline-none"
-        >
-          <option value="all">All sources</option>
-          <option value="manual">Added by me</option>
-          <option value="auto">Auto-pulled</option>
-        </select>
-        <span className="text-[12.5px] text-muted">
-          {visible.length} opening{visible.length === 1 ? "" : "s"}
-          {hasResume ? "" : " · add a résumé on step 1 to score fit"}
-        </span>
-        <button
-          type="button"
-          onClick={() => setShowAdd((v) => !v)}
-          className="ml-auto rounded-lg bg-ink px-3.5 py-2 text-[12.5px] font-semibold text-white"
-        >
-          {showAdd ? "Close" : "+ Add opening"}
-        </button>
-      </div>
-
-      {showAdd && (
-        <form
-          action={async (formData) => {
-            await addOpening(formData);
-            setShowAdd(false);
-          }}
-          className="mx-auto grid w-full max-w-[1120px] grid-cols-2 gap-3 border-b border-border bg-white px-7 py-5"
-        >
-          <RoleCombobox name="title" placeholder="Role — search or type your own" />
-          <input
-            name="company"
-            required
-            placeholder="Company — Figma"
-            className="rounded-lg border border-border-strong px-3 py-2.5 text-[12.5px] outline-none focus:border-accent"
-          />
-          <SearchableSelect
-            name="location"
-            endpoint="/api/locations"
-            placeholder="Location — search or type your own"
-          />
-          <input
-            name="url"
-            placeholder="Posting URL (optional)"
-            className="rounded-lg border border-border-strong px-3 py-2.5 text-[12.5px] outline-none focus:border-accent"
-          />
-          <div className="col-span-2 rounded-lg border border-border-strong px-3 py-3">
-            <SalaryRangeSlider name="comp" />
-          </div>
-          <textarea
-            name="description"
-            required
-            rows={4}
-            placeholder="Paste the job description — this is what Claude scores your fit against and drafts from."
-            className="col-span-2 rounded-lg border border-border-strong px-3 py-2.5 text-[12.5px] outline-none focus:border-accent"
-          />
-          <button
-            type="submit"
-            className="col-span-2 justify-self-start rounded-lg bg-accent px-4 py-2.5 text-[12.5px] font-semibold text-white hover:bg-accent-hover"
-          >
-            Add opening
-          </button>
-        </form>
-      )}
-
-      <div className="mx-auto w-full max-w-[1120px] flex-1 overflow-hidden px-7 py-4">
-        {visible.length === 0 ? (
-          <p className="py-10 text-center text-[13px] text-muted">
-            No openings yet — add one above.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {visible.map((o) => (
-              <div
-                key={o.id}
-                onClick={() => setDetailOpening(o)}
-                className={`flex cursor-pointer items-center gap-3.5 rounded-[11px] border p-3.5 text-left transition-colors ${
-                  o.selected ? "border-[1.5px] border-accent bg-white" : "border-border bg-white"
-                }`}
-              >
-                <button
-                  type="button"
-                  aria-label={o.selected ? `Deselect ${o.title}` : `Select ${o.title}`}
-                  onClick={(e) => { e.stopPropagation(); toggle(o); }}
-                  className={`size-[17px] flex-none rounded-[5px] ${
-                    o.selected ? "bg-accent" : "border-[1.5px] border-border-strong"
-                  }`}
-                />
-                <CompanyLogo company={o.company} logoUrl={o.logo_url} />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13.5px] font-semibold leading-tight">
-                    {o.title} · {o.company}
-                  </div>
-                  <div className="mt-1 text-[11.5px] text-muted">
-                    {[o.location, o.comp, displayPostedLabel(o.posted_label)].filter(Boolean).join(" · ")}
-                  </div>
-                  {o.fit_rationale && (
-                    <div className="mt-1 text-[11px] text-faint">{o.fit_rationale}</div>
-                  )}
-                </div>
-                {o.fit_score !== null ? (
-                  <span className="font-bold text-accent">{o.fit_score}%</span>
-                ) : (
-                  <span className="text-[11.5px] font-medium text-faint">no résumé</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between bg-ink px-7 py-4 text-[#F4F2ED]">
-        <div className="text-[13px] font-medium">
-          <strong className="font-bold">{selected.length} selected</strong>{" "}
-          <span className="text-[#F4F2ED]/60">
-            · drafts written in your voice, one at a time
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={selectAllShown}
-            className="text-[12.5px] font-medium text-[#F4F2ED]/70"
-          >
-            Select all {visible.length} shown
-          </button>
-          <button
-            type="button"
-            onClick={() => startTransition(() => draftSelectedOpenings())}
-            disabled={selected.length === 0 || isPending}
-            className="rounded-[9px] bg-accent px-5.5 py-3 text-[13.5px] font-semibold text-white disabled:opacity-40"
-          >
-            Draft {selected.length} application{selected.length === 1 ? "" : "s"} →
-          </button>
+    <div className="flex min-h-0 flex-1 flex-col bg-paper">
+      <div className="border-b border-border bg-white px-7 py-6">
+        <div className="mx-auto flex max-w-[1240px] items-end justify-between gap-5">
+          <div><div className="text-[11px] font-bold uppercase tracking-[.16em] text-accent">Job board</div><h1 className="mt-2 text-[28px] font-semibold tracking-[-.045em]">Openings that fit you</h1><p className="mt-1.5 text-[13px] text-muted">Every opening is matched against your résumé before you queue it.</p></div>
+          <div className="text-right text-[12px] text-muted"><div className="text-2xl font-bold tracking-[-.04em] text-ink">{visible.length}</div><div>of {openings.length} openings</div></div>
         </div>
       </div>
-      <Dialog open={detailOpening !== null} onOpenChange={(open) => !open && setDetailOpening(null)}>
-        {detailOpening && (
-          <DialogContent className="max-w-[620px] rounded-2xl p-6">
-            <DialogHeader>
-              <DialogTitle className="text-2xl tracking-[-.04em]">{detailOpening.title}</DialogTitle>
-              <DialogDescription className="text-sm">{detailOpening.company} · {detailOpening.location ?? "Location not listed"}</DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-accent-tint px-3 py-1.5 font-semibold text-accent">{detailOpening.fit_score !== null ? `${detailOpening.fit_score}% fit` : "Fit pending"}</span>{detailOpening.comp && <span className="rounded-full bg-tint px-3 py-1.5">{detailOpening.comp}</span>}{detailOpening.employment_type && <span className="rounded-full bg-tint px-3 py-1.5">{detailOpening.employment_type}</span>}<span className="rounded-full bg-tint px-3 py-1.5">{detailOpening.source === "jsearch" ? `JSearch${detailOpening.publisher ? ` · ${detailOpening.publisher}` : ""}` : "Added by you"}</span>{detailOpening.is_direct_apply && <span className="rounded-full bg-good-tint px-3 py-1.5 text-good">Direct apply</span>}</div>
-            <div className="max-h-[42vh] overflow-auto whitespace-pre-wrap text-[13px] leading-7 text-black/70">{detailOpening.description}</div>
-            <DialogFooter showCloseButton>
-              {detailOpening.url && <a href={detailOpening.url} target="_blank" rel="noreferrer" className="rounded-lg border border-border-strong px-4 py-2.5 text-sm font-semibold">View original posting ↗</a>}
-              <button type="button" onClick={() => { toggle(detailOpening); setDetailOpening(null); }} className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white">{detailOpening.selected ? "Remove from queue" : "Add to application queue"}</button>
-            </DialogFooter>
-          </DialogContent>
-        )}
-      </Dialog>
-    </>
+
+      <div className="border-b border-border bg-white px-7 py-3.5"><div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-2">
+        {profile?.roles?.length ? <div className="mr-2 flex items-center gap-1 rounded-full bg-tint p-1"><button type="button" onClick={() => setRoleFilter("all")} className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${roleFilter === "all" ? "bg-ink text-white" : "text-muted"}`}>All roles</button>{profile.roles.map((role) => <button key={role} type="button" onClick={() => setRoleFilter(role)} className={`max-w-[150px] truncate rounded-full px-3 py-1.5 text-[11px] font-bold ${roleFilter === role ? "bg-ink text-white" : "text-muted"}`}>{role}</button>)}</div> : null}
+        {FIT_LEVELS.map((level) => <button key={level} type="button" onClick={() => setFitFilter(level)} className={`rounded-full border px-3.5 py-2 text-[12px] font-semibold ${fitFilter === level ? "border-accent bg-accent text-white" : "border-border-strong bg-white text-muted"}`}>{level === 0 ? "All fits" : `Fit ${level}%+`}</button>)}
+        <button type="button" onClick={() => setRemoteOnly((value) => !value)} className={`rounded-full border px-3.5 py-2 text-[12px] font-semibold ${remoteOnly ? "border-accent bg-accent text-white" : "border-border-strong bg-white text-muted"}`}>Remote only</button>
+        {home && DISTANCE_LEVELS.map((level) => <button key={level} type="button" onClick={() => setDistanceFilter(level)} className={`rounded-full border px-3.5 py-2 text-[12px] font-semibold ${distanceFilter === level ? "border-accent bg-accent text-white" : "border-border-strong bg-white text-muted"}`}>{level === 0 ? "Any distance" : `${level}km`}</button>)}
+        <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as SourceFilter)} className="rounded-full border border-border-strong bg-white px-3.5 py-2 text-[12px] font-medium text-muted outline-none"><option value="all">All sources</option><option value="auto">Auto-pulled</option><option value="manual">Added by me</option></select>
+        <span className="ml-auto text-[12px] text-muted">{hasResume ? "Fit scores use your primary résumé" : "Add a résumé to calculate fit"}</span>
+      </div></div>
+
+      <div className="mx-auto grid min-h-0 w-full max-w-[1240px] flex-1 grid-cols-[minmax(0,1fr)_370px] gap-5 overflow-hidden px-7 py-5">
+        <section className="min-h-0 overflow-y-auto pr-1">
+          <div className="mb-3 flex items-center justify-between"><div className="text-[12px] font-semibold text-muted">{visible.length} matching openings</div><button type="button" onClick={selectAllShown} disabled={visible.length === 0 || isPending} className="text-[12px] font-bold text-accent disabled:opacity-40">{allVisibleSelected ? "Clear selection" : `Select all ${visible.length}`}</button></div>
+          {visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border-strong bg-white p-10 text-center"><div className="text-[15px] font-semibold">No openings match these filters</div><p className="mt-2 text-[12px] text-muted">Clear a filter or update your preferences to widen the feed.</p></div> : <div className="flex flex-col gap-2.5">
+            {visible.map((opening) => { const isActive = active?.id === opening.id; return <div key={opening.id} onClick={() => setDetailOpening(opening)} className={`group flex cursor-pointer items-start gap-3.5 rounded-2xl border bg-white p-4 text-left transition ${isActive ? "border-accent shadow-[0_0_0_2px_rgba(43,63,232,.08)]" : "border-border hover:border-border-strong"}`}>
+              <button type="button" aria-label={opening.selected ? `Remove ${opening.title} from queue` : `Add ${opening.title} to queue`} onClick={(event) => { event.stopPropagation(); toggle(opening); }} className={`mt-1 flex size-[18px] flex-none items-center justify-center rounded-[6px] border ${opening.selected ? "border-accent bg-accent text-white" : "border-border-strong bg-white"}`}>{opening.selected && <span className="text-[12px] leading-none">✓</span>}</button>
+              <CompanyLogo company={opening.company} logoUrl={opening.logo_url} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><div className="truncate text-[14px] font-semibold">{opening.title}</div><FitBadge opening={opening} /></div><div className="mt-1 text-[12px] font-medium text-muted">{opening.company}</div><div className="mt-2 truncate text-[11.5px] text-faint">{[opening.location, opening.comp, postedLabel(opening.posted_label)].filter(Boolean).join(" · ")}</div></div><span className="mt-1 text-[16px] text-faint transition group-hover:translate-x-0.5">→</span>
+            </div>; })}
+          </div>}
+        </section>
+
+        <aside className="min-h-0 overflow-y-auto rounded-2xl border border-border bg-white p-5">
+          {active ? <><div className="flex items-start gap-3"><CompanyLogo company={active.company} logoUrl={active.logo_url} /><div className="min-w-0 flex-1"><div className="text-[16px] font-semibold leading-tight tracking-[-.02em]">{active.title}</div><div className="mt-1 text-[12px] text-muted">{active.company}</div></div></div>
+            <div className="mt-4 flex flex-wrap gap-1.5 text-[11px]"><FitBadge opening={active}/>{active.employment_type && <span className="rounded-full bg-tint px-2.5 py-1 text-muted">{active.employment_type}</span>}{active.remote && <span className="rounded-full bg-good-tint px-2.5 py-1 font-semibold text-good">Remote</span>}{active.publisher && <span className="rounded-full bg-tint px-2.5 py-1 text-muted">{active.publisher}</span>}</div>
+            <div className="mt-5 border-t border-border pt-4"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-faint">Why it matches</div><div className="mt-2 text-[12px] leading-relaxed text-muted">{active.fit_rationale ?? "Fit will be calculated when a résumé is available."}</div></div>
+            <div className="mt-5 border-t border-border pt-4"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-faint">Your résumé</div><div className="mt-2 max-h-28 overflow-hidden whitespace-pre-wrap text-[11.5px] leading-relaxed text-muted">{profile?.resume_text ?? "No primary résumé yet."}</div><Link href="/resume" className="mt-2 inline-block text-[11px] font-bold text-accent">View or edit résumé →</Link></div>
+            <div className="mt-5 border-t border-border pt-4"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-faint">Job description</div><div className="mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap text-[12px] leading-relaxed text-muted">{active.description}</div></div>
+            <div className="mt-5 flex flex-col gap-2">{active.url && <a href={active.url} target="_blank" rel="noreferrer" className="rounded-xl border border-border-strong px-3 py-2.5 text-center text-[12px] font-semibold">Open original posting ↗</a>}<button type="button" onClick={() => toggle(active)} disabled={isPending} className={`rounded-xl px-3 py-2.5 text-[12px] font-semibold ${active.selected ? "border border-border-strong bg-white text-ink" : "bg-accent text-white"}`}>{active.selected ? "Remove from queue" : "Add to application queue"}</button></div>
+          </> : <div className="flex h-full items-center justify-center text-center text-[12px] text-muted">Select an opening to see its details and résumé match.</div>}
+        </aside>
+      </div>
+
+      <div className="sticky bottom-0 flex items-center justify-between border-t border-[#2d2d25] bg-ink px-7 py-3.5 text-paper"><div><strong className="text-[13px]">{selected.length} queued</strong><span className="ml-2 text-[12px] text-paper/55">Review each draft before anything is sent.</span></div><button type="button" onClick={() => startTransition(() => draftSelectedOpenings())} disabled={selected.length === 0 || isPending} className="rounded-xl bg-accent px-5 py-3 text-[12.5px] font-bold text-white disabled:opacity-40">{isPending ? "Preparing…" : `Prepare ${selected.length || "your"} draft${selected.length === 1 ? "" : "s"} →`}</button></div>
+    </div>
   );
 }

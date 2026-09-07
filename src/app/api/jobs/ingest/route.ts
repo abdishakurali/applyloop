@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/server";
 export const maxDuration = 60;
 
 const MAX_ROLES_PER_RUN = 5;
-const MAX_NEW_PER_ROLE = 5;
+const MAX_NEW_PER_ROLE = 20;
 const COUNTRY_CODES: Record<string, string> = {
   austria: "at", belgium: "be", canada: "ca", denmark: "dk", finland: "fi", france: "fr",
   germany: "de", ireland: "ie", italy: "it", kenya: "ke", netherlands: "nl", norway: "no",

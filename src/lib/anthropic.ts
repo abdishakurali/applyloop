@@ -15,6 +15,10 @@ function getClient(): Anthropic {
   return client;
 }
 
+function getGenerationModel() {
+  return process.env.ANTHROPIC_DRAFT_MODEL ?? "claude-haiku-4-5-20251001";
+}
+
 function extractJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const raw = fenced ? fenced[1] : text;
@@ -59,7 +63,7 @@ export type DraftResult = {
 
 export async function generateResume(fullName: string, targetRole: string, profileContext: string) {
   const message = await getClient().messages.create({
-    model: "claude-sonnet-5",
+    model: getGenerationModel(),
     max_tokens: 1400,
     system: "Write a plain, factual resume draft. Never invent employers, dates, metrics, skills, or credentials. Mark missing details as [add detail]. Avoid inflated language and AI-sounding phrases. Return only the resume text.",
     messages: [{ role: "user", content: `NAME: ${fullName}\nTARGET ROLE: ${targetRole}\nKNOWN PROFILE DETAILS: ${profileContext || "No details provided"}` }],
@@ -98,7 +102,7 @@ export async function generateDraft(
 ): Promise<DraftResult> {
   const toneHint = tone && TONE_HINTS[tone] ? `\n\nNUDGE: ${TONE_HINTS[tone]}` : "";
   const message = await getClient().messages.create({
-    model: "claude-sonnet-5",
+    model: getGenerationModel(),
     max_tokens: 1000,
     system: DRAFT_SYSTEM_PROMPT,
     messages: [
