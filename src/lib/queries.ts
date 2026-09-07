@@ -32,9 +32,10 @@ export async function getOpenings(): Promise<Opening[]> {
     .order("fit_score", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
   const unique = new Map<string, Opening>();
+  const normalize = (value: string | null) => (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
   for (const opening of data ?? []) {
     const key = opening.source !== "manual"
-      ? `${opening.source}:${opening.external_id ?? ""}:${opening.title}:${opening.company}:${opening.location ?? ""}:${opening.url ?? ""}`
+      ? `auto:${normalize(opening.title)}:${normalize(opening.company)}:${normalize(opening.location)}`
       : opening.id;
     if (!unique.has(key)) unique.set(key, opening);
   }
