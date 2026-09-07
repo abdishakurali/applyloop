@@ -7,10 +7,13 @@ import { reconcileOnboardingAnswers } from "@/lib/actions";
 export function OnboardingSync() {
   const router = useRouter();
   useEffect(() => {
-    if (sessionStorage.getItem("jobs_synced")) return;
+    const syncKey = "jobs_synced_v2";
+    if (sessionStorage.getItem(syncKey)) return;
     const raw = localStorage.getItem("onboarding_answers");
-    const syncJobs = () => fetch("/api/jobs/ingest", { method: "POST" }).finally(() => {
-      sessionStorage.setItem("jobs_synced", "1");
+    const syncJobs = () => fetch("/api/jobs/ingest", { method: "POST" }).then(async (response) => {
+      if (!response.ok) console.error("Job sync failed", await response.text());
+    }).finally(() => {
+      sessionStorage.setItem(syncKey, "1");
       router.refresh();
     });
     if (!raw) { syncJobs(); return; }
