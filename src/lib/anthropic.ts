@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 
 let client: Anthropic | null = null;
+let anthropicUnavailable = false;
 
 // Constructed lazily: the SDK throws at instantiation if the key is
 // missing, and actions.ts imports this module for every page (not just
@@ -44,27 +45,33 @@ export async function scoreFit(
   resumeText: string,
   opening: { title: string; company: string; description: string },
 ): Promise<FitScore> {
-  const message = await getClient().messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 300,
-    system:
-      "You score how well a candidate's résumé fits a job posting. " +
-      'Reply with ONLY a JSON object: {"score": <integer 0-100>, "rationale": "<one short sentence, plain language, no fluff>"}. No markdown, no other text.',
-    messages: [
-      {
-        role: "user",
-        content: `RÉSUMÉ:\n${resumeText}\n\nJOB: ${opening.title} at ${opening.company}\n\nDESCRIPTION:\n${opening.description}`,
-      },
-    ],
-  });
+  if (anthropicUnavailable) throw new Error("Anthropic provider unavailable");
+  try {
+    const message = await getClient().messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 300,
+      system:
+        "You score how well a candidate's résumé fits a job posting. " +
+        'Reply with ONLY a JSON object: {"score": <integer 0-100>, "rationale": "<one short sentence, plain language, no fluff>"}. No markdown, no other text.',
+      messages: [
+        {
+          role: "user",
+          content: `RÉSUMÉ:\n${resumeText}\n\nJOB: ${opening.title} at ${opening.company}\n\nDESCRIPTION:\n${opening.description}`,
+        },
+      ],
+    });
 
-  const block = message.content[0];
-  const text = block?.type === "text" ? block.text : "{}";
-  const parsed = extractJson(text) as Partial<FitScore>;
-  return {
-    score: Math.max(0, Math.min(100, Math.round(parsed.score ?? 0))),
-    rationale: parsed.rationale ?? "",
-  };
+    const block = message.content[0];
+    const text = block?.type === "text" ? block.text : "{}";
+    const parsed = extractJson(text) as Partial<FitScore>;
+    return {
+      score: Math.max(0, Math.min(100, Math.round(parsed.score ?? 0))),
+      rationale: parsed.rationale ?? "",
+    };
+  } catch (error) {
+    if (/401|authentication_error|API key is invalid/i.test(error instanceof Error ? error.message : String(error))) anthropicUnavailable = true;
+    throw error;
+  }
 }
 
 export type DraftResult = {
