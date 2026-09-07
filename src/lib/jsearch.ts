@@ -5,6 +5,7 @@ const JSEARCH_HOST = "jsearch.p.rapidapi.com";
 // Shared shape any job-data source maps into — the one seam left for a
 // second provider (e.g. Adzuna) later. Only JSearch exists today.
 export type ExternalJob = {
+  source: string;
   externalId: string;
   title: string;
   company: string;
@@ -107,6 +108,7 @@ export function mapJsearchJobToOpening(job: JsearchJob): ExternalJob {
     : null);
 
   return {
+    source: "jsearch",
     externalId: job.job_id,
     title: job.job_title,
     company: job.employer_name,

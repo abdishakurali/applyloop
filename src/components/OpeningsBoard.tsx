@@ -35,6 +35,16 @@ function FitBadge({ opening }: { opening: Opening }) {
   return <span className="rounded-full bg-good-tint px-2.5 py-1 text-[11px] font-bold text-good">{opening.fit_score}% fit</span>;
 }
 
+function sourceConfidence(opening: Opening) {
+  const hasCompanyPage = Boolean(opening.employer_website);
+  const hasFreshDate = Boolean(opening.posted_label);
+  const externalHost = opening.url ? (() => { try { return new URL(opening.url).hostname; } catch { return ""; } })() : "";
+  const looksLikeCompanyPage = hasCompanyPage && externalHost && !/(indeed|linkedin|glassdoor|ziprecruiter)/i.test(externalHost);
+  if (looksLikeCompanyPage && hasFreshDate) return { label: "High confidence", detail: "Fresh listing with a company website" };
+  if (opening.url && hasFreshDate) return { label: "Good confidence", detail: "Fresh listing with an application link" };
+  return { label: "Review before applying", detail: "The source did not provide enough freshness or company data" };
+}
+
 export function OpeningsBoard({ openings, hasResume, profile }: { openings: Opening[]; hasResume: boolean; profile: Profile | null }) {
   const [fitFilter, setFitFilter] = useState<(typeof FIT_LEVELS)[number]>(0);
   const [remoteOnly, setRemoteOnly] = useState(false);
@@ -94,6 +104,7 @@ export function OpeningsBoard({ openings, hasResume, profile }: { openings: Open
           {active ? <><div className="flex items-start gap-3"><CompanyLogo company={active.company} logoUrl={active.logo_url} /><div className="min-w-0 flex-1"><div className="text-[16px] font-semibold leading-tight tracking-[-.02em]">{active.title}</div><div className="mt-1 text-[12px] text-muted">{active.company}</div></div></div>
             <div className="mt-4 flex flex-wrap gap-1.5 text-[11px]"><FitBadge opening={active}/>{active.employment_type && <span className="rounded-full bg-tint px-2.5 py-1 text-muted">{active.employment_type}</span>}{active.remote && <span className="rounded-full bg-good-tint px-2.5 py-1 font-semibold text-good">Remote</span>}{active.publisher && <span className="rounded-full bg-tint px-2.5 py-1 text-muted">{active.publisher}</span>}</div>
             <div className="mt-5 border-t border-border pt-4"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-faint">Why it matches</div><div className="mt-2 text-[12px] leading-relaxed text-muted">{active.fit_rationale ?? "Fit will be calculated when a résumé is available."}</div></div>
+            <div className="mt-5 border-t border-border pt-4"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-faint">Listing confidence</div><div className="mt-2 text-[12px] font-semibold text-ink">{sourceConfidence(active).label}</div><div className="mt-1 text-[11px] leading-relaxed text-muted">{sourceConfidence(active).detail} · Source: {active.publisher ?? active.source}</div></div>
             <div className="mt-5 border-t border-border pt-4"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-faint">Your résumé</div><div className="mt-2 max-h-28 overflow-hidden whitespace-pre-wrap text-[11.5px] leading-relaxed text-muted">{profile?.resume_text ?? "No primary résumé yet."}</div><Link href="/resume" className="mt-2 inline-block text-[11px] font-bold text-accent">View or edit résumé →</Link></div>
             <div className="mt-5 border-t border-border pt-4"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-faint">Job description</div><div className="mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap text-[12px] leading-relaxed text-muted">{active.description}</div></div>
             <div className="mt-5 flex flex-col gap-2">{active.url && <a href={active.url} target="_blank" rel="noreferrer" className="rounded-xl border border-border-strong px-3 py-2.5 text-center text-[12px] font-semibold">Open original posting ↗</a>}<button type="button" onClick={() => toggle(active)} disabled={isPending} className={`rounded-xl px-3 py-2.5 text-[12px] font-semibold ${active.selected ? "border border-border-strong bg-white text-ink" : "bg-accent text-white"}`}>{active.selected ? "Remove from queue" : "Add to application queue"}</button></div>
