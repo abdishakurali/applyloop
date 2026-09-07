@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { scoreFit } from "@/lib/anthropic";
 import { mapJsearchJobToOpening, searchJobs } from "@/lib/jsearch";
 import { createServiceClient } from "@/utils/supabase/service";
+import { createClient } from "@/utils/supabase/server";
 
 export const maxDuration = 60;
 
@@ -13,6 +14,38 @@ function buildQuery(role: string, workLocations: string[], location: string | nu
     workLocations.includes("Remote — anywhere") && !workLocations.includes("On-site");
   if (remoteOnly || !location) return `${role} remote`;
   return `${role} in ${location}`;
+}
+
+async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, roles, location, work_locations, resume_text")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!profile) return { inserted: 0, skipped: 0 };
+  let inserted = 0;
+  let skipped = 0;
+  for (const role of (profile.roles ?? []).slice(0, MAX_ROLES_PER_RUN)) {
+    const query = buildQuery(role, profile.work_locations ?? [], profile.location);
+    let jobs;
+    try { jobs = await searchJobs(query); } catch { continue; }
+    for (const job of jobs.slice(0, MAX_NEW_PER_ROLE)) {
+      const mapped = mapJsearchJobToOpening(job);
+      if (!mapped.description) continue;
+      const { error } = await supabase.from("openings").insert({ user_id: userId, title: mapped.title, company: mapped.company, location: mapped.location, comp: mapped.comp, description: mapped.description, url: mapped.url, posted_label: mapped.postedLabel, source: "jsearch", external_id: mapped.externalId, lat: mapped.lat, lng: mapped.lng, remote: mapped.remote });
+      if (error?.code === "23505") skipped++;
+      else if (!error) inserted++;
+    }
+  }
+  return { inserted, skipped };
+}
+
+export async function POST() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try { return NextResponse.json(await ingestForUser(user.id, supabase)); }
+  catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Job search failed" }, { status: 502 }); }
 }
 
 // Triggered by Vercel Cron (see vercel.json) — pulls fresh jobs for every
