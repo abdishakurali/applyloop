@@ -25,11 +25,11 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
   if (!profile) return { inserted: 0, skipped: 0 };
   const { data: existing } = await supabase
     .from("openings")
-    .select("external_id")
+    .select("id, external_id")
     .eq("user_id", userId)
     .eq("source", "jsearch")
     .not("external_id", "is", null);
-  const seenExternalIds = new Set((existing ?? []).map((row) => row.external_id).filter(Boolean));
+  const existingByExternalId = new Map((existing ?? []).filter((row) => row.external_id).map((row) => [row.external_id, row.id]));
   let inserted = 0;
   let skipped = 0;
   for (const role of (profile.roles ?? []).slice(0, MAX_ROLES_PER_RUN)) {
@@ -39,13 +39,16 @@ async function ingestForUser(userId: string, supabase: Awaited<ReturnType<typeof
     for (const job of jobs.slice(0, MAX_NEW_PER_ROLE)) {
       const mapped = mapJsearchJobToOpening(job);
       if (!mapped.description) continue;
-      if (seenExternalIds.has(mapped.externalId)) {
-        skipped++;
+      const values = { title: mapped.title, company: mapped.company, location: mapped.location, comp: mapped.comp, description: mapped.description, url: mapped.url, posted_label: mapped.postedLabel, source: "jsearch", external_id: mapped.externalId, lat: mapped.lat, lng: mapped.lng, remote: mapped.remote, fetched_at: new Date().toISOString(), archived: false };
+      const existingId = existingByExternalId.get(mapped.externalId);
+      if (existingId) {
+        const { error } = await supabase.from("openings").update(values).eq("id", existingId).eq("user_id", userId);
+        if (!error) skipped++;
         continue;
       }
-      const { error } = await supabase.from("openings").insert({ user_id: userId, title: mapped.title, company: mapped.company, location: mapped.location, comp: mapped.comp, description: mapped.description, url: mapped.url, posted_label: mapped.postedLabel, source: "jsearch", external_id: mapped.externalId, lat: mapped.lat, lng: mapped.lng, remote: mapped.remote });
+      const { data: insertedRow, error } = await supabase.from("openings").insert({ user_id: userId, ...values }).select("id").single();
       if (error?.code === "23505") skipped++;
-      else if (!error) { inserted++; seenExternalIds.add(mapped.externalId); }
+      else if (!error && insertedRow) { inserted++; existingByExternalId.set(mapped.externalId, insertedRow.id); }
     }
   }
   return { inserted, skipped };
@@ -80,11 +83,11 @@ export async function GET(req: NextRequest) {
   for (const profile of profiles ?? []) {
     const { data: existing } = await supabase
       .from("openings")
-      .select("external_id")
+      .select("id, external_id")
       .eq("user_id", profile.id)
       .eq("source", "jsearch")
       .not("external_id", "is", null);
-    const seenExternalIds = new Set((existing ?? []).map((row) => row.external_id).filter(Boolean));
+    const existingByExternalId = new Map((existing ?? []).filter((row) => row.external_id).map((row) => [row.external_id, row.id]));
     const roles: string[] = (profile.roles ?? []).slice(0, MAX_ROLES_PER_RUN);
     if (roles.length === 0) continue;
 
@@ -102,8 +105,11 @@ export async function GET(req: NextRequest) {
         if (newForRole >= MAX_NEW_PER_ROLE) break;
         const mapped = mapJsearchJobToOpening(job);
         if (!mapped.description) continue;
-        if (seenExternalIds.has(mapped.externalId)) {
-          skipped++;
+        const values = { title: mapped.title, company: mapped.company, location: mapped.location, comp: mapped.comp, description: mapped.description, url: mapped.url, posted_label: mapped.postedLabel, source: "jsearch", external_id: mapped.externalId, lat: mapped.lat, lng: mapped.lng, remote: mapped.remote, fetched_at: new Date().toISOString(), archived: false };
+        const existingId = existingByExternalId.get(mapped.externalId);
+        if (existingId) {
+          const { error } = await supabase.from("openings").update(values).eq("id", existingId).eq("user_id", profile.id);
+          if (!error) skipped++;
           continue;
         }
 
@@ -111,18 +117,7 @@ export async function GET(req: NextRequest) {
           .from("openings")
           .insert({
             user_id: profile.id,
-            title: mapped.title,
-            company: mapped.company,
-            location: mapped.location,
-            comp: mapped.comp,
-            description: mapped.description,
-            url: mapped.url,
-            posted_label: mapped.postedLabel,
-            source: "jsearch",
-            external_id: mapped.externalId,
-            lat: mapped.lat,
-            lng: mapped.lng,
-            remote: mapped.remote,
+            ...values,
           })
           .select("id")
           .single();
@@ -134,7 +129,7 @@ export async function GET(req: NextRequest) {
         }
         newForRole++;
         inserted++;
-        seenExternalIds.add(mapped.externalId);
+        existingByExternalId.set(mapped.externalId, row.id);
 
         if (profile.resume_text && row) {
           try {
