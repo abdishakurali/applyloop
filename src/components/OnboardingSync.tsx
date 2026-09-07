@@ -4,15 +4,16 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { reconcileOnboardingAnswers } from "@/lib/actions";
 
-export function OnboardingSync() {
+export function OnboardingSync({ latestFetchedAt }: { latestFetchedAt: string | null }) {
   const router = useRouter();
   useEffect(() => {
     let cancelled = false;
     const syncKey = "jobs_synced_v3";
     const forceSync = new URLSearchParams(window.location.search).get("refresh") === "jobs";
+    const refreshDue = !latestFetchedAt || Date.now() - new Date(latestFetchedAt).getTime() >= 5 * 60 * 60 * 1000;
 
     async function sync() {
-      if (!forceSync && sessionStorage.getItem(syncKey)) return;
+      if (!forceSync && !refreshDue && sessionStorage.getItem(syncKey)) return;
 
       const raw = localStorage.getItem("onboarding_answers");
       if (raw) {
@@ -40,6 +41,6 @@ export function OnboardingSync() {
 
     void sync();
     return () => { cancelled = true; };
-  }, [router]);
+  }, [latestFetchedAt, router]);
   return null;
 }
