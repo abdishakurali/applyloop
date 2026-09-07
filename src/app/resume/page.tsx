@@ -13,6 +13,7 @@ export default async function ResumePage() {
       <ResumeForm
         defaultFullName={profile?.full_name ?? ""}
         defaultResumeText={profile?.resume_text ?? ""}
+        defaultRole={profile?.roles?.[0] ?? ""}
       />
     </div>
   );

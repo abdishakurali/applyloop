@@ -57,6 +57,17 @@ export type DraftResult = {
   missing: string;
 };
 
+export async function generateResume(fullName: string, targetRole: string, profileContext: string) {
+  const message = await getClient().messages.create({
+    model: "claude-sonnet-5",
+    max_tokens: 1400,
+    system: "Write a plain, factual resume draft. Never invent employers, dates, metrics, skills, or credentials. Mark missing details as [add detail]. Avoid inflated language and AI-sounding phrases. Return only the resume text.",
+    messages: [{ role: "user", content: `NAME: ${fullName}\nTARGET ROLE: ${targetRole}\nKNOWN PROFILE DETAILS: ${profileContext || "No details provided"}` }],
+  });
+  const block = message.content[0];
+  return block?.type === "text" ? block.text.trim() : "";
+}
+
 const DRAFT_SYSTEM_PROMPT = `You write cover letters in a specific candidate's own voice — never in generic corporate voice. Hard rules:
 - Never use: "I am excited to apply", "passionate", "leverage", "thrilled", "dynamic", or any similar stock phrase.
 - Vary sentence length the way real writing does — mix short and long sentences (roughly 7 to 31 words each).

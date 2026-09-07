@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { reconcileOnboardingAnswers, saveResume } from "@/lib/actions";
+import { buildResumeWithAI, reconcileOnboardingAnswers, saveResume } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -17,9 +17,11 @@ const WHAT_HAPPENS = [
 export function ResumeForm({
   defaultFullName,
   defaultResumeText,
+  defaultRole,
 }: {
   defaultFullName: string;
   defaultResumeText: string;
+  defaultRole: string;
 }) {
   // One-time reconciliation of answers the pre-signup onboarding wizard
   // stashed in localStorage (no session existed yet at that point).
@@ -88,6 +90,15 @@ export function ResumeForm({
                   </Button>
                 </Field>
               </FieldGroup>
+            </form>
+            <div className="my-6 flex items-center gap-3 text-[11px] text-muted"><span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" /></div>
+            <form action={buildResumeWithAI} className="rounded-xl bg-accent-tint p-4">
+              <div className="text-sm font-semibold text-accent">Build a first resume with AI</div>
+              <p className="mt-1 text-xs leading-relaxed text-muted">We will mark anything missing instead of inventing it. Review it before using it.</p>
+              <input type="hidden" name="fullName" value={defaultFullName} />
+              <input type="hidden" name="profileContext" value={defaultResumeText} />
+              <Input className="mt-3 bg-white" name="targetRole" defaultValue={defaultRole} placeholder="Target role, e.g. Product Manager" required />
+              <Button type="submit" variant="secondary" className="mt-3 w-full">Build my resume →</Button>
             </form>
           </CardContent>
         </Card>

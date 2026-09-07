@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { generateDraft, scoreFit } from "./anthropic";
+import { generateDraft, generateResume, scoreFit } from "./anthropic";
 import { getProfile } from "./queries";
 import type { BoardStage } from "./types";
 
@@ -37,6 +37,18 @@ export async function saveResume(formData: FormData) {
     });
   }
   redirect("/roles");
+}
+
+export async function buildResumeWithAI(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const fullName = String(formData.get("fullName") ?? "").trim();
+  const targetRole = String(formData.get("targetRole") ?? "").trim();
+  const context = String(formData.get("profileContext") ?? "").trim();
+  if (!targetRole) return;
+  const resumeText = await generateResume(fullName, targetRole, context);
+  await supabase.from("profiles").upsert({ id: user.id, full_name: fullName || null, resume_text: resumeText, updated_at: new Date().toISOString() });
+  await supabase.from("resume_profiles").insert({ user_id: user.id, name: `${targetRole} resume`, target_roles: [targetRole], resume_text: resumeText, is_primary: true });
+  redirect("/openings");
 }
 
 export async function saveRolePrefs(formData: FormData) {
@@ -130,6 +142,7 @@ export async function draftSelectedOpenings() {
   const profile = await getProfile();
   const resumeText = profile?.resume_text ?? "";
   const fullName = profile?.full_name ?? "You";
+  if (!resumeText.trim()) redirect("/resume?next=/draft");
 
   for (const opening of openings) {
     const { data: app } = await supabase
