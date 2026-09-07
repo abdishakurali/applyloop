@@ -1,31 +1,30 @@
-import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { ButtonLink } from "@/components/Button";
 import { StatusBoard } from "@/components/StatusBoard";
-import { getApplications } from "@/lib/queries";
+import { getApplications, getProfile } from "@/lib/queries";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
 
 export const dynamic = "force-dynamic";
 
 export default async function SentPage() {
-  const applications = await getApplications(["sent", "interviewing", "offer", "rejected"]);
+  const [applications, profile] = await Promise.all([getApplications(["sent", "interviewing", "offer", "rejected"]), getProfile()]);
   const interviewing = applications.filter((a) => a.status === "interviewing").length;
   const offers = applications.filter((a) => a.status === "offer").length;
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper">
-      <WorkspaceHeader
-        active="sent"
-        right={
-          <ButtonLink href="/openings" variant="dark" className="!px-4 !py-2.5 text-[12.5px]">
-            Find more openings
-          </ButtonLink>
-        }
-      />
-
+    <WorkspaceShell
+      active="sent"
+      userName={profile?.full_name ?? "Your workspace"}
+      right={
+        <ButtonLink href="/openings" variant="dark" className="!px-4 !py-2.5 text-[12.5px]">
+          Find more openings
+        </ButtonLink>
+      }
+    >
       <div className="mx-auto w-full max-w-[1120px] px-7 py-5.5">
         <div className="flex items-baseline gap-5">
           <div>
             <div className="text-2xl font-bold leading-none">{applications.length}</div>
-            <div className="mt-1.5 text-[11.5px] text-muted">sent</div>
+            <div className="mt-1.5 text-[11.5px] text-muted">ready to submit</div>
           </div>
           <div>
             <div className="text-2xl font-bold leading-none">{interviewing}</div>
@@ -42,6 +41,6 @@ export default async function SentPage() {
 
         <StatusBoard applications={applications} />
       </div>
-    </div>
+    </WorkspaceShell>
   );
 }

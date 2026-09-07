@@ -10,15 +10,15 @@ export function SendConfirm({ applications }: { applications: ApplicationWithOpe
   const ready = applications.filter((a) => !!a.draft_text);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper">
+    <div className="flex min-h-0 flex-1 items-center justify-center bg-paper px-6 py-8">
       <div className="w-[600px] rounded-2xl border border-border bg-white p-8 shadow-[0_16px_40px_rgba(20,20,15,.1)]">
         <h2 className="font-serif text-[30px] leading-[1.15] font-normal">
-          Send {applications.length} application{applications.length === 1 ? "" : "s"}?
+          Approve {applications.length} application{applications.length === 1 ? "" : "s"}?
         </h2>
         <p className="mt-2.5 mb-5.5 text-[13.5px] leading-relaxed text-muted">
-          This marks each one as sent in your tracker. Applyloop doesn&apos;t
-          submit anything on your behalf yet — actually send each one through
-          the company&apos;s own application page or email first.
+          This moves reviewed applications into your ready-to-submit tracker.
+          Applyloop does not claim an external submission until that company&apos;s
+          application page or email is actually completed.
         </p>
 
         <div className="flex flex-col gap-2.5">
@@ -62,7 +62,7 @@ export function SendConfirm({ applications }: { applications: ApplicationWithOpe
             disabled={ready.length === 0 || isPending}
             className="flex-1 rounded-[9px] bg-accent py-3.5 text-center text-[13.5px] font-semibold text-white hover:bg-accent-hover disabled:opacity-40"
           >
-            Mark {ready.length} as sent
+            Mark {ready.length} ready to submit
           </button>
           <Link
             href="/draft"

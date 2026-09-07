@@ -1,37 +1,22 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 import { SignOutButton } from "./SignOutButton";
+
+export type WorkspaceSection = "openings" | "sent" | "roles" | "resume" | "draft" | "billing";
 
 export function WorkspaceHeader({
   active,
   right,
 }: {
-  active: "openings" | "sent";
+  active: WorkspaceSection;
   right?: ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-border bg-white px-7 py-4">
+    <div className="flex min-h-[64px] items-center justify-between border-b border-border bg-white px-7 py-3">
       <div className="flex items-center gap-3.5">
         <Logo />
-        <Link
-          href="/openings"
-          className={`text-[12.5px] ${
-            active === "openings" ? "font-semibold text-ink" : "font-medium text-faint"
-          }`}
-        >
-          Openings
-        </Link>
-        <Link
-          href="/sent"
-          className={`text-[12.5px] ${
-            active === "sent" ? "font-semibold text-ink" : "font-medium text-faint"
-          }`}
-        >
-          Board
-        </Link>
-        <Link href="/roles" className="text-[12.5px] font-medium text-faint">Roles</Link>
-        <Link href="/resume" className="text-[12.5px] font-medium text-faint">Résumés</Link>
+        <div className="h-5 w-px bg-border" />
+        <span className="text-[12px] font-semibold capitalize text-muted">{active === "sent" ? "Applications" : active === "resume" ? "Résumés" : active === "draft" ? "Cover letters" : active}</span>
       </div>
       <div className="flex items-center gap-3">
         {right}
