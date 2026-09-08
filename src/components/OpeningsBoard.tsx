@@ -20,6 +20,12 @@ function postedLabel(value: string | null) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(parsed);
 }
 
+function roleMatchesTitle(title: string, role: string) {
+  const titleTokens = title.toLowerCase().split(/[^a-z0-9+#]+/).filter((token) => token.length > 2);
+  const roleTokens = role.toLowerCase().split(/[^a-z0-9+#]+/).filter((token) => token.length > 2);
+  return roleTokens.some((token) => titleTokens.includes(token));
+}
+
 function FitBadge({ opening }: { opening: Opening }) {
   if (opening.fit_score === null) return <span className="text-[11px] font-semibold text-faint">Fit pending</span>;
   return <span className="rounded-full bg-good-tint px-2.5 py-1 text-[11px] font-bold text-good">{opening.fit_score}% fit</span>;
@@ -56,8 +62,8 @@ export function OpeningsBoard({ openings, hasResume, profile, latestFetchedAt }:
   const home = useMemo(() => profile?.home_lat != null && profile?.home_lng != null ? { lat: profile.home_lat, lng: profile.home_lng } : null, [profile]);
   const visible = useMemo(() => openings.filter((opening) => {
     const openingTitle = opening.title.toLowerCase();
-    if (roleFilter !== "all" && roleFilter !== "other" && !openingTitle.includes(roleFilter.toLowerCase())) return false;
-    if (roleFilter === "other" && profileRoles.some((role) => openingTitle.includes(role.toLowerCase()))) return false;
+    if (roleFilter !== "all" && roleFilter !== "other" && !roleMatchesTitle(openingTitle, roleFilter)) return false;
+    if (roleFilter === "other" && profileRoles.some((role) => roleMatchesTitle(openingTitle, role))) return false;
     const query = searchQuery.trim().toLowerCase();
     if (query && !`${opening.title} ${opening.company} ${opening.description}`.toLowerCase().includes(query)) return false;
     if (locationQuery.trim() && !(opening.location ?? "").toLowerCase().includes(locationQuery.trim().toLowerCase())) return false;
