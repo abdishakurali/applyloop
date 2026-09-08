@@ -27,7 +27,18 @@ function escapeHtml(value: string) {
 
 export function JobMap({ jobs, home = null }: JobMapProps) {
   const [geocoded, setGeocoded] = useState<Record<string, { lat: number; lng: number }>>({});
-  const pending = useMemo(() => jobs.filter((job) => job.lat == null && job.lng == null && job.location && !geocoded[job.id]).slice(0, 12), [jobs, geocoded]);
+  const pending = useMemo(() => {
+    const seen = new Set<string>();
+    return jobs
+      .filter((job) => job.lat == null && job.lng == null && job.location)
+      .map((job) => ({ ...job, locationKey: job.location!.trim().toLowerCase() }))
+      .filter((job) => {
+        if (!job.locationKey || seen.has(job.locationKey) || geocoded[job.locationKey]) return false;
+        seen.add(job.locationKey);
+        return true;
+      })
+      .slice(0, 6);
+  }, [jobs, geocoded]);
   const geocoding = pending.length > 0;
 
   useEffect(() => {
@@ -40,7 +51,7 @@ export function JobMap({ jobs, home = null }: JobMapProps) {
           const response = await fetch(`/api/locations?withCoords=1&wide=1&q=${encodeURIComponent(job.location!)}`);
           const result = await response.json() as { places?: Array<{ lat?: number; lon?: number }> };
           const first = result.places?.[0];
-          if (first?.lat != null && first.lon != null) found[job.id] = { lat: first.lat, lng: first.lon };
+          if (first?.lat != null && first.lon != null) found[job.locationKey] = { lat: first.lat, lng: first.lon };
         } catch { /* Keep listings visible even when geocoding is unavailable. */ }
         await new Promise((resolve) => window.setTimeout(resolve, 350));
       }
@@ -52,7 +63,10 @@ export function JobMap({ jobs, home = null }: JobMapProps) {
     return () => { cancelled = true; };
   }, [pending]);
 
-  const locatedJobs = useMemo(() => jobs.map((job) => ({ ...job, ...(geocoded[job.id] ?? {}) })).filter((job) => job.lat != null && job.lng != null), [jobs, geocoded]);
+  const locatedJobs = useMemo(() => jobs.map((job) => ({
+    ...job,
+    ...(job.lat == null && job.lng == null && job.location ? geocoded[job.location.trim().toLowerCase()] ?? {} : {}),
+  })).filter((job) => job.lat != null && job.lng != null), [jobs, geocoded]);
   const center: [number, number] = home
     ? [home.lat, home.lng]
     : locatedJobs[0]
