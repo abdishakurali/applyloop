@@ -25,6 +25,7 @@ type PlaceWithCoords = { label: string; lat: number; lon: number };
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
   const withCoords = req.nextUrl.searchParams.get("withCoords") === "1";
+  const wide = req.nextUrl.searchParams.get("wide") === "1";
   if (q.length < 2) return NextResponse.json({ results: [], places: [] });
 
   const remoteMatches = REMOTE_OPTIONS.filter((r) =>
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
   );
 
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addresstype=city&limit=6&q=${encodeURIComponent(q)}`;
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&${wide ? "" : "addresstype=city&"}limit=6&q=${encodeURIComponent(q)}`;
     const res = await fetch(url, {
       headers: { "User-Agent": "Applyloop/1.0 (personal job-search tool)" },
       signal: AbortSignal.timeout(4000),

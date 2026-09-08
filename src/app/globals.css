@@ -149,6 +149,10 @@ html.dark .text-faint { color: var(--faint) !important; }
 html.dark .border-border { border-color: var(--border) !important; }
 html.dark .border-border-strong { border-color: var(--border-strong) !important; }
 html.dark input, html.dark select, html.dark textarea { color: var(--ink); }
+.job-map-bubble, .job-map-home { background: transparent; border: 0; }
+.job-map-bubble span { display: flex; width: 32px; height: 32px; align-items: center; justify-content: center; border: 2px solid #fff; border-radius: 999px; background: #5f4df4; color: #fff; font-size: 10px; font-weight: 800; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+.job-map-bubble img { width: 100%; height: 100%; border-radius: 999px; object-fit: cover; background: #fff; }
+.job-map-home span { display: flex; width: 22px; height: 22px; align-items: center; justify-content: center; border: 3px solid #fff; border-radius: 999px; background: #ff6b6b; color: #fff; font-size: 10px; box-shadow: 0 3px 10px rgba(0,0,0,.35); }
 
 /* Recording-matched onboarding surface. Keep this scoped so the application
    workspace retains its own component treatment. */

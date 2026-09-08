@@ -18,9 +18,9 @@ export function SignOutButton() {
       type="button"
       onClick={signOut}
       title="Sign out"
-      className="size-7 rounded-full bg-border text-[10px] font-semibold text-muted transition-colors hover:bg-border-strong"
+      className="rounded-full bg-tint px-3 py-2 text-[11px] font-semibold text-muted transition-colors hover:bg-border-strong hover:text-ink"
     >
-      ⏻
+      Sign out
     </button>
   );
 }

@@ -63,6 +63,8 @@ export function OpeningsBoard({ openings, hasResume, profile }: { openings: Open
     return true;
   }), [openings, fitFilter, remoteOnly, distanceFilter, sourceFilter, roleFilter, searchQuery, locationQuery, directOnly, employmentFilter, home]);
   const sourceOptions = useMemo(() => Array.from(new Set(openings.map((opening) => opening.publisher ?? opening.source).filter(Boolean))).sort(), [openings]);
+  const titleSuggestions = useMemo(() => Array.from(new Set(openings.flatMap((opening) => [opening.title, opening.company]))).slice(0, 100), [openings]);
+  const locationSuggestions = useMemo(() => Array.from(new Set(openings.map((opening) => opening.location).filter(Boolean))).slice(0, 100), [openings]);
   const selected = openings.filter((opening) => opening.selected);
   const allVisibleSelected = visible.length > 0 && visible.every((opening) => opening.selected);
   const active = detailOpening && visible.some((opening) => opening.id === detailOpening.id) ? detailOpening : visible[0] ?? null;
@@ -80,8 +82,10 @@ export function OpeningsBoard({ openings, hasResume, profile }: { openings: Open
       </div>
 
       <div className="border-b border-border bg-white px-7 py-3.5"><div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-2">
-        <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search title or company" aria-label="Search jobs" className="h-10 min-w-[220px] flex-1 rounded-xl border border-border-strong bg-white px-3 text-[12px] text-ink outline-none placeholder:text-faint focus:border-accent" />
-        <input value={locationQuery} onChange={(event) => setLocationQuery(event.target.value)} placeholder="Location" aria-label="Filter jobs by location" className="h-10 w-[150px] rounded-xl border border-border-strong bg-white px-3 text-[12px] text-ink outline-none placeholder:text-faint focus:border-accent" />
+        <input list="opening-search-suggestions" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search title or company" aria-label="Search jobs" className="h-10 min-w-[220px] flex-1 rounded-xl border border-border-strong bg-white px-3 text-[12px] text-ink outline-none placeholder:text-faint focus:border-accent" />
+        <datalist id="opening-search-suggestions">{titleSuggestions.map((suggestion) => <option key={suggestion} value={suggestion} />)}</datalist>
+        <input list="opening-location-suggestions" value={locationQuery} onChange={(event) => setLocationQuery(event.target.value)} placeholder="Location" aria-label="Filter jobs by location" className="h-10 w-[150px] rounded-xl border border-border-strong bg-white px-3 text-[12px] text-ink outline-none placeholder:text-faint focus:border-accent" />
+        <datalist id="opening-location-suggestions">{locationSuggestions.map((suggestion) => <option key={suggestion!} value={suggestion!} />)}</datalist>
         {profile?.roles?.length ? <div className="mr-2 flex items-center gap-1 rounded-full bg-tint p-1"><button type="button" onClick={() => setRoleFilter("all")} className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${roleFilter === "all" ? "bg-ink text-white" : "text-muted"}`}>All roles</button>{profile.roles.map((role) => <button key={role} type="button" onClick={() => setRoleFilter(role)} className={`max-w-[150px] truncate rounded-full px-3 py-1.5 text-[11px] font-bold ${roleFilter === role ? "bg-ink text-white" : "text-muted"}`}>{role}</button>)}</div> : null}
         <Link href="/roles" className="rounded-full border border-border-strong bg-white px-3.5 py-2 text-[12px] font-semibold text-muted hover:border-accent hover:text-accent">Change roles</Link>
         {FIT_LEVELS.map((level) => <button key={level} type="button" onClick={() => setFitFilter(level)} className={`rounded-full border px-3.5 py-2 text-[12px] font-semibold ${fitFilter === level ? "border-accent bg-accent text-white" : "border-border-strong bg-white text-muted"}`}>{level === 0 ? "All fits" : `Fit ${level}%+`}</button>)}

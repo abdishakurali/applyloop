@@ -24,7 +24,7 @@ export async function WorkspaceShell({
     <div className="flex min-h-screen bg-canvas">
       <AppSidebar active={sidebarActive} userName={userName} />
       <main className="flex min-h-screen min-w-0 flex-1 flex-col bg-paper">
-        <WorkspaceHeader active={active} right={right} />
+        <WorkspaceHeader active={active} userName={userName} right={right} />
         <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       </main>
     </div>
