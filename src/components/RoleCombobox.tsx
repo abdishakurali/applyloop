@@ -140,7 +140,7 @@ export function RoleMultiCombobox({
   }
 
   return (
-    <Command shouldFilter={false} className="rounded-lg border">
+    <Command shouldFilter={false} className="!size-auto min-h-0 w-full rounded-lg border">
       <div onKeyDown={onKeyDown}>
         <CommandInput
           value={query}
@@ -168,7 +168,7 @@ export function RoleMultiCombobox({
           ))}
         </div>
       )}
-      <CommandList>
+      <CommandList className="max-h-52 min-h-0 flex-none">
         <CommandEmpty>
           {query.trim() ? `Press Enter to add "${query.trim()}"` : "Type to search…"}
         </CommandEmpty>

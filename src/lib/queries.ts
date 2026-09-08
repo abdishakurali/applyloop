@@ -33,8 +33,7 @@ export async function getOpenings(): Promise<Opening[]> {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const { data: profile } = await supabase.from("profiles").select("roles, resume_text").eq("id", user.id).maybeSingle();
-  const roles = ((profile?.roles ?? []) as string[]).map((role) => role.toLowerCase().split(/[^a-z0-9+#]+/).filter((token) => token.length > 2));
+  const { data: profile } = await supabase.from("profiles").select("resume_text").eq("id", user.id).maybeSingle();
 
   const { data } = await supabase
     .from("openings")
@@ -46,11 +45,6 @@ export async function getOpenings(): Promise<Opening[]> {
   const unique = new Map<string, Opening>();
   const normalize = (value: string | null) => (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
   for (const opening of data ?? []) {
-    const isPublicSource = opening.source === "remotive" || opening.source === "arbeitnow";
-    if (isPublicSource && roles.length > 0) {
-      const title = normalize(opening.title);
-      if (!roles.some((role) => role.some((token) => title.includes(token)))) continue;
-    }
     const hydrated = opening.fit_score == null && profile?.resume_text
       ? (() => {
           const fit = localFitScore(profile.resume_text, { title: opening.title, company: opening.company, description: opening.description });

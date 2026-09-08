@@ -12,5 +12,5 @@ export default async function OpeningsPage() {
     null,
   );
 
-  return <WorkspaceShell active="openings" userName={profile?.full_name ?? "Your workspace"}><OnboardingSync latestFetchedAt={latestFetchedAt} /><OpeningsBoard openings={openings} hasResume={!!profile?.resume_text} profile={profile} /></WorkspaceShell>;
+  return <WorkspaceShell active="openings" userName={profile?.full_name ?? "Your workspace"}><OnboardingSync latestFetchedAt={latestFetchedAt} /><OpeningsBoard key={latestFetchedAt ?? "no-jobs"} openings={openings} hasResume={!!profile?.resume_text} profile={profile} latestFetchedAt={latestFetchedAt} /></WorkspaceShell>;
 }

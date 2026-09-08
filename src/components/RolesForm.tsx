@@ -9,6 +9,7 @@ import { saveRolePrefs } from "@/lib/actions";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import type { Opening, Profile } from "@/lib/types";
 
 const WORK_LOCATION_OPTIONS = [
@@ -29,6 +30,7 @@ export function RolesForm({
   const [workLocations, setWorkLocations] = useState<string[]>(
     profile?.work_locations ?? [],
   );
+  const [selectedLocation, setSelectedLocation] = useState(profile?.location ?? "");
   const initialSalary = Number.parseInt(profile?.min_base?.replace(/[^0-9]/g, "") ?? "", 10);
   const [minSalary, setMinSalary] = useState(Number.isFinite(initialSalary) ? Math.min(250000, Math.max(30000, initialSalary)) : 70000);
 
@@ -70,6 +72,8 @@ export function RolesForm({
                 name="location"
                 defaultValue={profile?.location ?? ""}
                 placeholder="Nairobi, Kenya"
+                onPick={(place) => setSelectedLocation(place?.label ?? "")}
+                onTextChange={setSelectedLocation}
               />
               <Input
                 name="timezone"
@@ -78,6 +82,7 @@ export function RolesForm({
                 className="h-auto py-3"
               />
             </div>
+            {selectedLocation && <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-accent/20 bg-accent-tint px-3.5 py-3 text-[12px]"><div><div className="font-semibold text-accent">Selected location</div><div className="mt-0.5 text-muted">{selectedLocation}</div></div><span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-muted">{selectedLocation.split(",").at(-1)?.trim() ?? "Country"}</span></div>}
             <div className="mt-3">
               <Input
                 name="maxDistanceKm"
@@ -112,8 +117,9 @@ export function RolesForm({
             <div className="mt-5.5 grid gap-5 sm:grid-cols-2">
               <div>
                 <div className="mb-2 flex items-baseline justify-between text-[12.5px] font-semibold"><span>Minimum base</span><output className="text-accent">${minSalary.toLocaleString()}</output></div>
-                <input type="range" name="minBase" min="30000" max="250000" step="5000" value={minSalary} onChange={(e) => setMinSalary(Number(e.target.value))} aria-label="Minimum annual salary" className="h-2 w-full cursor-grab accent-[#6538f2] active:cursor-grabbing" />
-                <div className="mt-1 flex justify-between text-[10px] text-faint"><span>€30k</span><span>€250k+</span></div>
+                <input type="hidden" name="minBase" value={minSalary} />
+                <Slider value={[minSalary]} min={30000} max={250000} step={5000} onValueChange={(value) => setMinSalary(Number(Array.isArray(value) ? value[0] ?? minSalary : value))} aria-label="Minimum annual salary" className="mt-4 w-full cursor-grab active:cursor-grabbing" />
+                <div className="mt-2 flex justify-between text-[10px] text-faint"><span>$30k</span><span>$250k+</span></div>
               </div>
               <div>
                 <div className="mb-2.5 text-[12.5px] font-semibold">Work authorization</div>
