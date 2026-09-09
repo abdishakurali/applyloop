@@ -171,19 +171,20 @@ export async function draftSelectedOpenings() {
     .in("status", ["drafting"]);
   const existingByOpening = new Map((existingApps ?? []).map((app) => [app.opening_id, app]));
 
-  for (const opening of openings) {
-    const existing = existingByOpening.get(opening.id);
-    const { data: app } = existing?.id
-      ? { data: existing }
-      : await supabase
-          .from("applications")
-          .insert({ user_id: user.id, opening_id: opening.id, status: "drafting" })
-          .select("id")
-          .single();
-    if (!app) continue;
-
-    await supabase.from("openings").update({ selected: false }).eq("id", opening.id);
+  const missing = openings
+    .filter((opening) => !existingByOpening.has(opening.id))
+    .map((opening) => ({ user_id: user.id, opening_id: opening.id, status: "drafting" as const }));
+  if (missing.length > 0) {
+    const { error } = await supabase.from("applications").insert(missing);
+    if (error) throw new Error(error.message);
   }
+  const { error: clearError } = await supabase
+    .from("openings")
+    .update({ selected: false })
+    .in("id", openingIds)
+    .eq("user_id", user.id)
+    .eq("archived", false);
+  if (clearError) throw new Error(clearError.message);
 
   redirect("/draft");
 }
