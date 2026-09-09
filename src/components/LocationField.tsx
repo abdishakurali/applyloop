@@ -2,6 +2,7 @@
 
 import { Combobox, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react";
 import { useRef, useState } from "react";
+import { locationFlag } from "@/lib/location";
 
 type Place = { label: string; lat: number; lon: number };
 
@@ -68,6 +69,7 @@ export function LocationField({
   return (
     <Combobox value={value} onChange={(v) => v != null && pick(v)}>
       <div className="relative">
+        {value && <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[15px]">{locationFlag(value)}</span>}
         <ComboboxInput
           name={name}
           placeholder={placeholder}
@@ -79,7 +81,7 @@ export function LocationField({
             search(e.target.value);
           }}
           autoComplete="off"
-          className="w-full rounded-lg border border-border-strong px-3 py-2.5 pr-10 text-[12.5px] outline-none focus:border-accent"
+          className="w-full rounded-lg border border-border-strong px-3 py-2.5 pr-10 text-[12.5px] outline-none focus:border-accent data-[value]:pl-9"
         />
         {coords && (
           <>
@@ -100,7 +102,7 @@ export function LocationField({
                   value={p.label}
                   className="cursor-pointer px-3 py-2 text-[12.5px] data-[focus]:bg-tint"
                 >
-                  {p.label}
+                  <span className="flex items-center gap-2"><span aria-hidden="true">{locationFlag(p.label)}</span>{p.label}</span>
                 </ComboboxOption>
               ))}
           </ComboboxOptions>

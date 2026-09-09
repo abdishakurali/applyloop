@@ -82,7 +82,13 @@ export type DraftResult = {
 };
 
 export function localDraft(resumeText: string, fullName: string, opening: { title: string; company: string; description: string }): DraftResult {
-  const summary = resumeText.replace(/\s+/g, " ").trim().slice(0, 360);
+  const summary = resumeText
+    .split(/\n{2,}|(?<=[.!?])\s+/)
+    .map((part) => part.replace(/\s+/g, " ").trim())
+    .filter((part) => part.length > 35 && !/^(about|experience|skills|work|contact|open to|download cv)$/i.test(part))
+    .slice(0, 2)
+    .join(" ")
+    .slice(0, 280);
   return {
     letter: `I’m applying for the ${opening.title} role at ${opening.company}.\n\nMy background includes ${summary || "the experience in my résumé"}. I’m interested in this role because the work described lines up with the systems and product work I’ve been doing.\n\nI’d be glad to talk through the relevant projects and how I could contribute to the team.`,
     signoff: fullName.split(" ")[0] || fullName,

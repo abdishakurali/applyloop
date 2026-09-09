@@ -140,59 +140,28 @@ export function RoleMultiCombobox({
   }
 
   return (
-    <Command shouldFilter={false} className="!size-auto min-h-0 w-full rounded-lg border">
-      <div onKeyDown={onKeyDown}>
-        <CommandInput
-          value={query}
-          onValueChange={(v) => {
-            setQuery(v);
-            search(v);
-          }}
-          placeholder={placeholder}
-        />
-      </div>
-      {value.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 border-b p-2">
-          {value.map((role) => (
-            <Button
-              key={role}
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => remove(role)}
-              className="gap-1"
-            >
-              {role}
-              <XIcon className="size-3" />
-            </Button>
-          ))}
-        </div>
-      )}
-      <CommandList className="max-h-52 min-h-0 flex-none">
-        <CommandEmpty>
-          {query.trim() ? `Press Enter to add "${query.trim()}"` : "Type to search…"}
-        </CommandEmpty>
-        {!query.trim() && (
-          <CommandGroup heading="Popular job titles">
-            {popular.filter((m) => !value.includes(m)).map((m) => (
-              <CommandItem key={m} value={m} onSelect={() => add(m)}>
-                {m}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
-        {matches.length > 0 && (
-          <CommandGroup>
-            {matches
-              .filter((m) => !value.includes(m))
-              .map((m) => (
-                <CommandItem key={m} value={m} onSelect={() => add(m)}>
-                  {m}
-                </CommandItem>
-              ))}
-          </CommandGroup>
-        )}
-      </CommandList>
-    </Command>
+    <div className="space-y-2">
+      {value.length > 0 && <div className="flex flex-wrap gap-1.5">
+        {value.map((role) => <Button key={role} type="button" variant="secondary" size="sm" onClick={() => remove(role)} className="gap-1">{role}<XIcon className="size-3" /></Button>)}
+      </div>}
+      <Popover>
+        <PopoverTrigger className={buttonVariants({ variant: "outline", className: "w-full justify-between font-normal" })}>
+          <span className={value.length ? "text-ink" : "text-muted-foreground"}>{value.length ? "Add another role" : placeholder}</span>
+          <ChevronsUpDownIcon className="opacity-50" />
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command shouldFilter={false}>
+            <div onKeyDown={onKeyDown}><CommandInput value={query} onValueChange={(v) => { setQuery(v); search(v); }} placeholder="Search a role or type your own…" /></div>
+            <CommandList className="max-h-64">
+              <CommandEmpty>{query.trim() ? `Press Enter to add “${query.trim()}”` : "Search for a role"}</CommandEmpty>
+              {!query.trim() && <CommandGroup heading="Popular roles">{popular.filter((m) => !value.includes(m)).map((m) => <CommandItem key={m} value={m} onSelect={() => add(m)}>{m}</CommandItem>)}</CommandGroup>}
+              {query.trim() && !matches.includes(query.trim()) && <CommandGroup><CommandItem value={query.trim()} onSelect={() => add(query.trim())}>Add “{query.trim()}”</CommandItem></CommandGroup>}
+              {matches.length > 0 && <CommandGroup>{matches.filter((m) => !value.includes(m)).map((m) => <CommandItem key={m} value={m} onSelect={() => add(m)}>{m}</CommandItem>)}</CommandGroup>}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <p className="text-[11px] text-muted">Choose one or more roles. Remove any role with ×.</p>
+    </div>
   );
 }

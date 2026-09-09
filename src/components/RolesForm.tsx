@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import type { Opening, Profile } from "@/lib/types";
+import { locationFlag } from "@/lib/location";
 
 const WORK_LOCATION_OPTIONS = [
   "Remote — anywhere",
@@ -61,38 +62,22 @@ export function RolesForm({
             </CardDescription>
           </CardHeader>
           <CardContent className="px-0">
-            <RoleMultiCombobox value={roles} onChange={setRoles} placeholder="Search roles or type your own…" />
+            <RoleMultiCombobox value={roles} onChange={setRoles} placeholder="Choose your first role…" />
 
             <div className="my-6 h-px bg-border" />
 
             <div className="mb-1 text-[13.5px] font-semibold">Where are you?</div>
-            <p className="mb-3 text-[11.5px] text-muted">Search any city, country, or region and choose a suggestion.</p>
-            <div className="grid grid-cols-2 gap-3">
+            <p className="mb-3 text-[11.5px] text-muted">Start typing a city or country. Pick one result so we can show nearby work accurately.</p>
+            <div>
               <LocationField
                 name="location"
                 defaultValue={profile?.location ?? ""}
-                placeholder="Nairobi, Kenya"
+                placeholder="Search city or country…"
                 onPick={(place) => setSelectedLocation(place?.label ?? "")}
                 onTextChange={setSelectedLocation}
               />
-              <Input
-                name="timezone"
-                defaultValue={profile?.timezone ?? ""}
-                placeholder="Time zone · EAT (GMT+3)"
-                className="h-auto py-3"
-              />
             </div>
-            {selectedLocation && <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-accent/20 bg-accent-tint px-3.5 py-3 text-[12px]"><div><div className="font-semibold text-accent">Selected location</div><div className="mt-0.5 text-muted">{selectedLocation}</div></div><span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-muted">{selectedLocation.split(",").at(-1)?.trim() ?? "Country"}</span></div>}
-            <div className="mt-3">
-              <Input
-                name="maxDistanceKm"
-                type="number"
-                min={0}
-                defaultValue={profile?.max_distance_km ?? ""}
-                placeholder="Max distance from there, in km · leave blank for no limit"
-                className="h-auto py-3"
-              />
-            </div>
+            {selectedLocation && <div className="mt-3 flex items-center gap-3 rounded-xl border border-accent/20 bg-accent-tint px-3.5 py-3 text-[12px]"><span className="text-lg" aria-hidden="true">{locationFlag(selectedLocation)}</span><div><div className="font-semibold text-accent">Search location</div><div className="mt-0.5 text-muted">{selectedLocation}</div></div></div>}
 
             <div className="mt-5 mb-3 text-[13.5px] font-semibold">
               And where would you work?
@@ -114,6 +99,14 @@ export function RolesForm({
               ))}
             </div>
 
+            <details className="mt-5 rounded-xl border border-border bg-tint/40 px-3.5 py-3">
+              <summary className="cursor-pointer text-[12.5px] font-semibold">More preferences <span className="font-normal text-muted">(optional)</span></summary>
+              <div className="mt-3 grid gap-3">
+                <Input name="timezone" defaultValue={profile?.timezone ?? ""} placeholder="Time zone · e.g. Europe/Dublin" className="h-auto py-3" />
+                <Input name="maxDistanceKm" type="number" min={0} defaultValue={profile?.max_distance_km ?? ""} placeholder="Maximum commute in km · blank means no limit" className="h-auto py-3" />
+              </div>
+            </details>
+
             <div className="mt-5.5 grid gap-5 sm:grid-cols-2">
               <div>
                 <div className="mb-2 flex items-baseline justify-between text-[12.5px] font-semibold"><span>Minimum base</span><output className="text-accent">${minSalary.toLocaleString()}</output></div>
@@ -123,12 +116,7 @@ export function RolesForm({
               </div>
               <div>
                 <div className="mb-2.5 text-[12.5px] font-semibold">Work authorization</div>
-                <Input
-                  name="workAuth"
-                  defaultValue={profile?.work_auth ?? ""}
-                  placeholder="Kenya · needs sponsorship elsewhere"
-                  className="h-auto py-3"
-                />
+                <Input name="workAuth" defaultValue={profile?.work_auth ?? ""} placeholder="e.g. EU/EEA citizen, needs sponsorship" className="h-auto py-3" />
               </div>
             </div>
           </CardContent>
