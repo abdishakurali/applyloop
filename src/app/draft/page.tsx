@@ -12,7 +12,10 @@ export default async function DraftPage() {
   if (applications.length === 0) redirect("/openings");
   const enrichedApplications = applications.map((application) => ({
     ...application,
-    resumeName: chooseResume(resumeProfiles, application.opening.title, profile?.resume_text ?? "").name,
+    ...(() => {
+      const selected = chooseResume(resumeProfiles, application.opening.title, profile?.resume_text ?? "");
+      return { resumeName: application.resume_name ?? selected.name, resumeText: selected.text };
+    })(),
   }));
 
   return <WorkspaceShell active="draft" userName={profile?.full_name ?? "Your workspace"}><DraftHydrator /><DraftReview applications={enrichedApplications} /></WorkspaceShell>;

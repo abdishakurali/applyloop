@@ -118,3 +118,15 @@ create unique index if not exists openings_source_dedup_idx
 alter table applications drop constraint if exists applications_status_check;
 alter table applications add constraint applications_status_check
   check (status in ('drafting', 'sent', 'interviewing', 'offer', 'rejected'));
+
+-- Per-opening application kits. The app also has a legacy fallback while an
+-- older project is being upgraded, so existing drafts remain readable.
+alter table applications add column if not exists cover_letter_text text;
+alter table applications add column if not exists tailored_resume_text text;
+alter table applications add column if not exists resume_name text;
+alter table applications add column if not exists approval_status text not null default 'pending';
+alter table applications add column if not exists approved_at timestamptz;
+alter table applications add column if not exists updated_at timestamptz not null default now();
+alter table applications drop constraint if exists applications_approval_status_check;
+alter table applications add constraint applications_approval_status_check
+  check (approval_status in ('pending', 'approved', 'needs_review'));

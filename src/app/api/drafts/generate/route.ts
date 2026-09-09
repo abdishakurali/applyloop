@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { generateDraft, localDraft } from "@/lib/anthropic";
+import { generateApplicationKit, localDraft } from "@/lib/anthropic";
+import { saveApplicationKit } from "@/lib/applicationKit";
 import { createClient } from "@/utils/supabase/server";
 import { chooseResume } from "@/lib/resumeMatch";
 
@@ -24,12 +25,12 @@ export async function POST() {
     if (!opening) continue;
     const selectedResume = chooseResume(resumeProfiles ?? [], opening.title, resumeText);
     try {
-      const draft = await generateDraft(selectedResume.text, profile?.full_name ?? "You", opening);
-      await supabase.from("applications").update({ draft_text: draft.letter, draft_highlight: draft.highlight, draft_missing: draft.missing, signoff: draft.signoff }).eq("id", app.id).eq("user_id", user.id);
+      const draft = await generateApplicationKit(selectedResume.text, profile?.full_name ?? "You", opening);
+      await saveApplicationKit(supabase, app.id, user.id, { ...draft, coverLetterText: draft.letter, tailoredResumeText: draft.tailoredResume, resumeName: selectedResume.name });
     } catch (error) {
       console.error("draft generation failed", error);
       const fallback = localDraft(selectedResume.text, profile?.full_name ?? "You", opening);
-      await supabase.from("applications").update({ draft_text: fallback.letter, draft_highlight: fallback.highlight, draft_missing: fallback.missing, signoff: fallback.signoff }).eq("id", app.id).eq("user_id", user.id);
+      await saveApplicationKit(supabase, app.id, user.id, { ...fallback, coverLetterText: fallback.letter, tailoredResumeText: selectedResume.text, resumeName: selectedResume.name });
     }
   }
 

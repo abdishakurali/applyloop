@@ -3,6 +3,9 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { updateApplicationStage, updateApplicationStatus } from "@/lib/actions";
+import { CompanyLogo } from "@/components/CompanyLogo";
+import { readApplicationKit } from "@/lib/applicationKit";
+import { locationFlag } from "@/lib/location";
 import type { ApplicationWithOpening, BoardStage } from "@/lib/types";
 
 const STAGES: { status: BoardStage; label: string }[] = [
@@ -25,13 +28,13 @@ function timeAgo(iso: string | null) {
 function BoardCard({ app }: { app: ApplicationWithOpening }) {
   const [, startTransition] = useTransition();
   const [note, setNote] = useState(app.status_note ?? "");
+  const kit = readApplicationKit(app);
 
   return (
     <div className="rounded-[11px] border border-border bg-white p-3.5">
-      <div className="text-[12.5px] font-semibold leading-tight">
-        {app.opening.title} · {app.opening.company}
-      </div>
+      <div className="flex items-start gap-2.5"><CompanyLogo company={app.opening.company} logoUrl={app.opening.logo_url} employerWebsite={app.opening.employer_website} url={app.opening.url} /><div className="min-w-0"><div className="text-[12.5px] font-semibold leading-tight">{app.opening.title}</div><div className="mt-1 text-[11px] text-muted">{app.opening.company} · {locationFlag(app.opening.location)} {app.opening.location ?? "Location not listed"}</div></div></div>
       <div className="mt-1 text-[11px] text-muted">{timeAgo(app.sent_at)}</div>
+      <div className="mt-2 rounded-lg bg-paper px-2.5 py-2 text-[10.5px] leading-relaxed text-muted">{kit.resumeName ?? "Primary résumé"} · {kit.coverLetterText ? "cover letter ready" : "kit incomplete"}</div>
       <select
         value={app.status}
         onChange={(e) =>
@@ -54,6 +57,7 @@ function BoardCard({ app }: { app: ApplicationWithOpening }) {
         placeholder="Add a note…"
         className="mt-2 w-full rounded-md border border-border-strong bg-white px-2 py-1.5 text-[11.5px] outline-none placeholder:text-faint"
       />
+      {kit.coverLetterText && <details className="mt-2 text-[11px] text-muted"><summary className="cursor-pointer font-semibold text-ink">View cover letter</summary><p className="mt-2 whitespace-pre-wrap leading-relaxed">{kit.coverLetterText}</p></details>}
     </div>
   );
 }

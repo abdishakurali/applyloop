@@ -81,6 +81,19 @@ export type DraftResult = {
   missing: string;
 };
 
+export type ApplicationKitResult = DraftResult & {
+  tailoredResume: string;
+};
+
+function cleanResumeSource(value: string) {
+  const noise = new Set(["AAM", "About", "Experience", "Skills", "Work", "Open to", "Contact", "Get in touch", "Download CV", "View details"]);
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !noise.has(line))
+    .join("\n");
+}
+
 export function localDraft(resumeText: string, fullName: string, opening: { title: string; company: string; description: string }): DraftResult {
   const summary = resumeText
     .split(/\n{2,}|(?<=[.!?])\s+/)
@@ -94,6 +107,44 @@ export function localDraft(resumeText: string, fullName: string, opening: { titl
     signoff: fullName.split(" ")[0] || fullName,
     highlight: "the systems and product work I’ve been doing",
     missing: "AI provider unavailable; please review this local draft before sending",
+  };
+}
+
+const TONE_HINTS: Record<string, string> = {
+  Plainer: "Rewrite it plainer — shorter words, less polish, more matter-of-fact.",
+  Shorter: "Cut it down — same claims, noticeably fewer words overall.",
+  Warmer: "Make the tone warmer and more personable without adding any flattery clichés.",
+  "More technical": "Lean more technical — foreground the specific tools, systems, and mechanics involved.",
+};
+
+const APPLICATION_KIT_SYSTEM_PROMPT = `You prepare a job-specific application kit from a candidate's source résumé and one job posting. Never invent employers, dates, metrics, skills, credentials, or experience. Keep the candidate's actual facts, but reorder and shorten them to emphasize the job. The résumé should be plain text with a concise summary, relevant experience, and relevant skills. The cover letter should be 3-4 short paragraphs, without a greeting or signoff, in a direct human voice. Avoid generic AI phrases, inflated claims, and the words "passionate", "leverage", "thrilled", and "dynamic". Include one honest missing-detail note rather than guessing. Return ONLY JSON: {"tailoredResume":"...","letter":"...","highlight":"...","missing":"..."}.`;
+
+export async function generateApplicationKit(
+  resumeText: string,
+  fullName: string,
+  opening: { title: string; company: string; description: string },
+  tone?: string,
+): Promise<ApplicationKitResult> {
+  const source = cleanResumeSource(resumeText);
+  const toneHint = tone && TONE_HINTS[tone] ? `\n\nVOICE NUDGE: ${TONE_HINTS[tone]}` : "";
+  const message = await getClient().messages.create({
+    model: getGenerationModel(),
+    max_tokens: 2200,
+    system: APPLICATION_KIT_SYSTEM_PROMPT,
+    messages: [{
+      role: "user",
+      content: `CANDIDATE: ${fullName}\n\nSOURCE RÉSUMÉ:\n${source}\n\nTARGET: ${opening.title} at ${opening.company}\n\nJOB POSTING:\n${opening.description}${toneHint}`,
+    }],
+  });
+  const block = message.content[0];
+  const text = block?.type === "text" ? block.text : "{}";
+  const parsed = extractJson(text) as Partial<ApplicationKitResult>;
+  return {
+    tailoredResume: parsed.tailoredResume ?? source,
+    letter: parsed.letter ?? localDraft(source, fullName, opening).letter,
+    signoff: fullName.split(" ")[0] || fullName,
+    highlight: parsed.highlight ?? "Review the specific evidence before approving this kit",
+    missing: parsed.missing ?? "Confirm the details the posting expects before submitting",
   };
 }
 
@@ -122,13 +173,6 @@ Reply with ONLY a JSON object, no markdown fences, no other text:
   "highlight": "the exact short phrase from the letter that is the one unflattering/honest detail",
   "missing": "a short phrase naming one relevant fact that was NOT invented because it isn't in the résumé (e.g. 'team size, and why you're leaving')"
 }`;
-
-const TONE_HINTS: Record<string, string> = {
-  Plainer: "Rewrite it plainer — shorter words, less polish, more matter-of-fact.",
-  Shorter: "Cut it down — same claims, noticeably fewer words overall.",
-  Warmer: "Make the tone warmer and more personable without adding any flattery clichés.",
-  "More technical": "Lean more technical — foreground the specific tools, systems, and mechanics involved.",
-};
 
 export async function generateDraft(
   resumeText: string,

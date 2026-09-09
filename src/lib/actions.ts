@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { generateDraft, generateResume, localDraft, localFitScore, scoreFit } from "./anthropic";
+import { generateApplicationKit, generateResume, localDraft, localFitScore, scoreFit } from "./anthropic";
+import { approveApplicationRecords, saveApplicationKit } from "./applicationKit";
 import { getProfile } from "./queries";
 import { chooseResume } from "./resumeMatch";
 import type { BoardStage } from "./types";
@@ -206,20 +207,12 @@ export async function regenerateDraft(applicationId: string, tone: string) {
   const fullName = profile?.full_name ?? "You";
 
   try {
-    const draft = await generateDraft(resumeText, fullName, app.opening, tone);
-    await supabase
-      .from("applications")
-      .update({
-        draft_text: draft.letter,
-        draft_highlight: draft.highlight,
-        draft_missing: draft.missing,
-        signoff: draft.signoff,
-      })
-      .eq("id", applicationId);
+    const draft = await generateApplicationKit(resumeText, fullName, app.opening, tone);
+    await saveApplicationKit(supabase, applicationId, user.id, { ...draft, coverLetterText: draft.letter, tailoredResumeText: draft.tailoredResume, resumeName: selectedResume.name });
     } catch (error) {
       console.error("regenerateDraft failed", error);
-      const fallback = localDraft(resumeText, fullName, app.opening);
-      await supabase.from("applications").update({ draft_text: fallback.letter, draft_highlight: fallback.highlight, draft_missing: fallback.missing, signoff: fallback.signoff }).eq("id", applicationId);
+      const fallback = { tailoredResume: resumeText, ...localDraft(resumeText, fullName, app.opening) };
+      await saveApplicationKit(supabase, applicationId, user.id, { ...fallback, coverLetterText: fallback.letter, tailoredResumeText: fallback.tailoredResume, resumeName: selectedResume.name });
   }
   revalidatePath("/draft");
 }
@@ -232,11 +225,12 @@ export async function discardApplication(applicationId: string) {
 
 export async function updateApplicationDraft(applicationId: string, text: string) {
   const { supabase, user } = await requireUser();
-  await supabase
+  const modern = await supabase
     .from("applications")
-    .update({ draft_text: text })
+    .update({ draft_text: text, cover_letter_text: text, updated_at: new Date().toISOString() })
     .eq("id", applicationId)
     .eq("user_id", user.id);
+  if (modern.error) await supabase.from("applications").update({ draft_text: text }).eq("id", applicationId).eq("user_id", user.id);
   revalidatePath("/draft");
 }
 
@@ -244,11 +238,7 @@ export async function sendApplications(ids: string[]) {
   // Internal approval only. This does not submit to an employer, ATS, job board, or email.
   const { supabase, user } = await requireUser();
   if (ids.length === 0) return;
-  await supabase
-    .from("applications")
-    .update({ status: "sent", sent_at: new Date().toISOString() })
-    .in("id", ids)
-    .eq("user_id", user.id);
+  await approveApplicationRecords(supabase, ids, user.id);
   redirect("/sent");
 }
 
