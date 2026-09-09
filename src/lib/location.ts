@@ -14,8 +14,9 @@ const LOCATION_FLAGS: Array<[string[], string]> = [
 
 export function locationFlag(value: string | null | undefined) {
   const normalized = (value ?? "").toLowerCase();
-  for (const [needles, flag] of LOCATION_FLAGS) {
-    if (needles.some((needle) => normalized.includes(needle))) return flag;
-  }
+  const matches = LOCATION_FLAGS.filter(([needles]) => needles.some((needle) => normalized.includes(needle)));
+  const countryMatches = matches.filter(([needles]) => !needles.includes("worldwide") && !needles.includes("europe"));
+  if (countryMatches.length > 1) return "🌍";
+  if (matches.length > 0) return matches[0][1];
   return "📍";
 }
